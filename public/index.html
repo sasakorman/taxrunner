@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Google AdSense -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9184399190245939" crossorigin="anonymous"></script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Tax Runner — Daily Money Drop</title>
@@ -274,12 +276,20 @@ html, body{ height:100%; overflow:hidden; }
 <script src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"></script>
 </head>
 <body>
-<div class="banner-left">
-  <img src="https://via.placeholder.com/300x600?text=Ad+Banner" alt="Ad Banner">
+<!-- LEFT 300x600 -->
+<div class="banner-left side-banner">
+  <ins class="adsbygoogle"
+       style="display:inline-block;width:300px;height:600px"
+       data-ad-client="ca-pub-9184399190245939"
+       data-ad-slot="REPLACE_WITH_SLOT_ID_LEFT"></ins>
 </div>
 
-<div class="banner-right">
-  <img src="https://via.placeholder.com/300x600?text=Ad+Banner" alt="Ad Banner">
+<!-- RIGHT 300x600 -->
+<div class="banner-right side-banner">
+  <ins class="adsbygoogle"
+       style="display:inline-block;width:300px;height:600px"
+       data-ad-client="ca-pub-9184399190245939"
+       data-ad-slot="REPLACE_WITH_SLOT_ID_RIGHT"></ins>
 </div>
   <div class="hud">
     <div class="pill">Score: <span id="scoreVal">0</span> <span class="muted">| Best:</span> <span id="bestVal">0</span></div>
@@ -326,7 +336,10 @@ html, body{ height:100%; overflow:hidden; }
             <button class="btn" id="btnSubmit">Submit last score</button>
           </div>
           <div id="bannerAd" style="width:300px;height:250px;margin:auto;">
-            <!-- Google AdSense kod -->
+            <ins class="adsbygoogle"
+                 style="display:inline-block;width:300px;height:250px"
+                 data-ad-client="ca-pub-9184399190245939"
+                 data-ad-slot="REPLACE_WITH_SLOT_ID_300x250"></ins>
           </div>
         </div>
         <div class="panel shop">
@@ -508,6 +521,7 @@ let itemDiscounts = {
 };
 
 let dino = { x:50, y:GROUND_Y-DINO_H, width:DINO_W, height:DINO_H, dy:0, gravity:0.6, jumpPower:-14, isJumping:false };
+let jumpTimestamps = []; // za pametni anti-cheat
 let obstacles = [];
 let clouds = [{x:200,y:20},{x:600,y:40}];
 
@@ -778,6 +792,7 @@ function baseReset(){
   dino.isJumping = false;
   totalScore=0; distanceTraveled=0; speed=3; gameOver=false;
   obstacles=[]; nextObstacleIn = rand(minGap,maxGap); jumpDistances=[];
+  jumpTimestamps = [];
 }
 function startGame(){ 
   baseReset(); 
@@ -795,7 +810,34 @@ function pauseGame(){ if(gameState==='playing'){ gameState='paused'; } else if(g
 function showMenu(){ gameState='menu'; menuCard.style.display='block'; document.body.classList.add('menu-open'); goOverlay.style.display='none'; }
 
 /* Input */
-function handleJump(){ if(gameState!=='playing') return; if(!dino.isJumping && !gameOver && jumpCooldown<=0){ dino.dy=dino.jumpPower; dino.isJumping=true; jumpCooldown=10; } }
+function handleJump(){ 
+  if(gameState!=='playing') return; 
+  if(!dino.isJumping && !gameOver && jumpCooldown<=0){ 
+    dino.dy=dino.jumpPower; 
+    dino.isJumping=true; 
+    jumpCooldown=10;
+    
+    // Dodaj timestamp skoka
+    jumpTimestamps.push(Date.now());
+    if (jumpTimestamps.length > 20) jumpTimestamps.shift(); // drži zadnjih 20
+  } 
+}
+
+function checkJumpRhythm(){
+  if (jumpTimestamps.length < 6) return false;
+
+  let diffs = [];
+  for (let i = 1; i < jumpTimestamps.length; i++) {
+    diffs.push(jumpTimestamps[i] - jumpTimestamps[i - 1]);
+  }
+
+  const avg = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+  const variance = diffs.map(x => Math.pow(x - avg, 2)).reduce((a, b) => a + b, 0) / diffs.length;
+  const stddev = Math.sqrt(variance);
+
+  // Ako su svi skokovi u jako preciznom ritmu — bot
+  return stddev < 50; // možeš podesiti prag
+}
 
 document.getElementById('playBtn').onclick = () => {
   const playerName = (document.getElementById('playerName')?.value || '').trim().slice(0,16);
@@ -1088,6 +1130,17 @@ function update(){
   if(!gameOver && antiCheatEnabled && jumpDistances.length>=10){
     const first=jumpDistances[0]; let same=0; for(let i=0;i<10;i++) if(Math.abs(jumpDistances[i]-first)<=1) same++;
     if(same===10){ cheatedHard=true; gameOver=true; gameState='gameover'; }
+  }
+
+  /* New rhythm detector (timestamp-based) */
+  if (!gameOver && antiCheatEnabled && checkJumpRhythm()) {
+    console.warn('[ANTI-CHEAT] Consistent jump rhythm detected');
+    toast('⚠️ Anti-cheat triggered: jump pattern too perfect.');
+    cheatedHard = true;
+    gameOver = true;
+    gameState = 'gameover';
+    goScore.textContent = Math.floor(totalScore);
+    goOverlay.style.display = 'flex';
   }
 
   /* Difficulty & score */
@@ -1465,6 +1518,14 @@ let interstitialShownThisRound = false;
 <div id="toasts"></div>
 
 <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.adsbygoogle').forEach(function () {
+      (adsbygoogle = window.adsbygoogle || []).push({});
+    });
+  });
+</script>
+
+<script>
 (function(){
   const grid   = document.querySelector('.grid');
   const howto  = document.querySelector('.panel.howto');
@@ -1582,6 +1643,38 @@ let interstitialShownThisRound = false;
   .grid{ row-gap: 6px !important; }
   .panel{ padding: 12px 12px !important; }
   .panel .label{ margin-bottom: 6px !important; }
+}
+
+/* ===== MOBILE FIX (<1024px) ===== */
+@media (max-width: 1023px){
+  /* dozvoli normalan scroll i spriječi horizontalni */
+  html, body { height:auto !important; overflow-y:auto !important; overflow-x:hidden !important; }
+
+  /* sakrij lijevi/desni banner na mobitelu */
+  .banner-left,
+  .banner-right { display:none !important; }
+
+  /* dok je otvoren meni – sakrij HUD da ne preklapa */
+  body.menu-open .hud { display:none !important; }
+
+  /* menu kartica: full width, bez scale i malo niže */
+  #menuCard{
+    position:absolute;
+    left:50%;
+    top:58% !important;                              /* po potrebi 56–60% */
+    transform:translate(-50%,-50%) scale(1) !important;
+    transform-origin:center !important;
+    width: calc(100% - 24px) !important;
+    max-width: 480px !important;
+    padding: 14px 12px !important;
+  }
+
+  /* jedan stupac, kompaktniji razmaci */
+  .grid{ grid-template-columns:1fr !important; row-gap:10px !important; }
+  .panel{ min-height:0 !important; align-self:start !important; padding:12px !important; }
+
+  /* canvas ide preko cijele širine */
+  canvas#game{ width:100% !important; height:auto !important; }
 }
 
 

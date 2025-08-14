@@ -2,12 +2,21 @@
 const express = require('express');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Serve static frontend from ../public (jer je index.js u /server)
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// Root -> index.html
+app.get('/', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
 
 /** ===== Utilities (Europe/Zagreb day key) ===== */
 const tz = 'Europe/Zagreb';

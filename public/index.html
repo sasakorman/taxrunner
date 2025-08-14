@@ -570,7 +570,7 @@ async function adminClaimFirst(){
 }
 
 /* ==== API & player ==== */
-const API = 'http://localhost:3000';   // OBAVEZNO ovako (ili 3001 ako si mijenjao port)
+const API = ''; // same-origin na Renderu
 let playerId = localStorage.getItem('playerId') || null;
 let sse = null; // EventSource
 let _shieldActive = false; // lokalni cache stanja štita

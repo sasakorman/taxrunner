@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tax Runner — Daily Money Drop</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#111827cc; --panel-b:#1f2937;
+    --text:#e5e7eb; --muted:#94a3b8; --danger:#ef4444;
+    --card-radius:16px; --shadow:0 10px 25px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial;
+    color:var(--text);
+    background:radial-gradient(1200px 700px at 30% -10%, #1f2a4d 0%, #0f172a 60%);
+    min-height:100vh; display:flex; flex-direction:column; align-items:center; gap:16px; padding:32px 14px 28px;
+  }
+  .hud{position:fixed; top:14px; left:16px; display:flex; gap:8px; z-index:20; align-items:center}
+  .pill{background:#0b1324aa; border:1px solid #1f2a44; backdrop-filter: blur(6px); padding:8px 12px; border-radius:999px; box-shadow:var(--shadow); color:var(--text); font-weight:600}
+  .pill .muted{color:#94a3b8; font-weight:500}
+  .pill .money{color:#ffd166; font-weight:700}
+  .stage{position:relative; width:100%; max-width:1100px;}
+  canvas{ width:100%; height:auto; background:#e8f7fb; border:2px solid #0b1324; border-radius:12px; box-shadow:0 20px 30px rgba(0,0,0,.35)}
+  .card{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(940px, calc(100% - 48px));
+        background: linear-gradient(180deg, rgba(20,26,46,.88), rgba(17,24,39,.88)); border:1px solid #22293e; border-radius:var(--card-radius);
+        padding:22px 22px 18px; box-shadow: var(--shadow); z-index:15}
+  .card h1{margin:0 0 8px; font-size:28px}
+  .row{display:flex; gap:14px; align-items:center; flex-wrap:wrap}
+  .badge{display:inline-flex; align-items:center; gap:8px; background:#0b1324; border:1px solid #1f2a44; padding:8px 12px; border-radius:12px; color:var(--text); font-weight:700}
+  .badge .money{color:#ffd166}
+  .grid{display:grid; grid-template-columns: 1.1fr .9fr; gap:18px; margin-top:18px}
+  .panel{background:#0b1324aa; border:1px solid #1f2a44; border-radius:14px; padding:16px; min-height:140px}
+  .list{margin:10px 0 0 0; padding-left:18px; color:#94a3b8}
+  .btn{background:linear-gradient(180deg,#2a365e,#1f2a4d); border:1px solid #2c3861; color:#fff; padding:10px 16px; border-radius:12px; cursor:pointer; font-weight:700}
+  .btn:active{transform:translateY(1px)}
+  .field-row{display:flex; gap:8px; align-items:center; margin-top:12px}
+  input[type="text"]{background:#0b1324; color:#e5e7eb; border-radius:10px; border:1px solid #1f2a44; padding:10px 12px; outline:none; width:220px}
+  .overlay{position:absolute; inset:0; pointer-events:none}
+  .flash{background:rgba(255,255,255,.95)}
+  .banner{position:absolute; top:10px; left:50%; transform:translateX(-50%); background:var(--danger); color:#fff; padding:8px 12px; border-radius:999px; font-weight:800}
+  .label{font-weight:700; color:#bcd1ff}
+  .center{position:relative; width:100%; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px 16px}
+  /* Hide game area while in menu */
+  body.menu-open .stage canvas{display:none}
+  /* Game over overlay */
+  .go-overlay{position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(15,23,42,.6); z-index:30}
+  .go-card{background: linear-gradient(180deg, rgba(20,26,46,.95), rgba(17,24,39,.95)); border:1px solid #22293e; border-radius:16px; padding:20px 22px; box-shadow: var(--shadow); min-width:320px; text-align:center}
+  .go-title{font-size:26px; font-weight:800; margin-bottom:8px}
+  .go-sub{color:var(--muted); margin-bottom:16px}
+  .go-actions{display:flex; gap:10px; justify-content:center}
+  .go-btn{background:linear-gradient(180deg,#2a365e,#1f2a4d); border:1px solid #2c3861; color:#fff; padding:10px 16px; border-radius:12px; cursor:pointer; font-weight:700}
+  .go-btn.secondary{background:linear-gradient(180deg,#333b59,#2a334f);}
+
+  /* Shop items */
+  .shop-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .shop-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: #0b1324aa;
+    border: 1px solid #1f2a44;
+    border-radius: 8px;
+  }
+  .shop-item span:first-child {
+    flex: 1;
+    color: #bcd1ff;
+  }
+  .shop-item span:nth-child(2) {
+    width: 60px;
+    text-align: right;
+    font-weight: 700;
+    color: #ffd166;
+  }
+
+  /* Toast notifications */
+  #toasts{position:fixed; right:16px; top:16px; display:flex; flex-direction:column; gap:8px; z-index:9999}
+  .toast{background:#0b1324ee; border:1px solid #1f2a44; color:#e5e7eb; padding:10px 12px; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,.35); font-weight:600}
+
+  /* Only How-to panel: raise bottom border */
+  .panel.howto{
+    min-height: auto;      /* pregazi globalno min-height:140px */
+    padding-bottom: 10px;  /* manji donji padding -> donja crta ide gore */
+  }
+  .panel.howto .list{ margin-top: 6px; }     /* zbij bullete da ne guraju visinu */
+  .panel.howto .field-row{ margin-top: 8px; }/* manje praznog između inputa i tipke */
+
+/* Shrink cijelog menija za ~10% */
+#menuCard{
+  transform: translate(-50%,-50%) scale(0.9); /* prepiše .card transform */
+  transform-origin: top center;               /* da se “stišće” prema gore */
+}
+
+/* How to play: ne rasteži na visinu reda */
+.panel.howto{
+  min-height: 0;        /* stvarno bez min visine */
+  align-self: start;    /* NE stretch preko grid-a */
+  padding-bottom: 8px;  /* mrvu digni donju crtu */
+}
+
+/* Spusti cijelu karticu malo niže i zadrži postojeći scale */
+#menuCard{ top:54%; transform:translate(-50%,-50%) scale(0.9); transform-origin:top center; }
+
+/* Ako nema #menuCard, koristi .card kao fallback (ostavi zakomentirano ako nije potrebno) */
+/*
+.card{ top:54% !important; transform:translate(-50%,-50%) scale(0.9) !important; transform-origin:top center; }
+*/
+
+/* Leaderboard nek NE drži min visinu reda — time Shop ide gore */
+.panel.leader{ min-height:0; align-self:start; padding-bottom:8px; }
+
+/* Malo zbij razmak između redova grid-a da Shop još priđe gore */
+.grid{ row-gap:8px; }
+
+/* Sitna napomena ispod How to play */
+#dropNote{
+  display:inline-block;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
+  padding:6px 10px;
+  border-radius:10px;
+  font-size:12.5px;
+  margin:6px 0 10px;
+  color:var(--muted);
+}
+#dropNote strong{ font-weight:700; }
+
+/* === Fit all panels into one screen (1366×768 baseline) === */
+
+/* cijela kartica malo manja i malo više centrirana */
+#menuCard{
+  top:52%;
+  transform: translate(-50%,-50%) scale(0.88); /* po potrebi 0.86–0.90 */
+  transform-origin: top center;
+}
+
+/* zbij okomite razmake grid-a */
+.grid{ row-gap: 8px; }
+
+/* svi paneli kompaktniji */
+.panel{ padding: 12px 14px; }
+.panel .label{ margin-bottom: 8px; font-size: 14px; }
+.panel .list{ margin-top: 6px; }
+
+/* ne rasteži panele po visini reda */
+.panel.howto, .panel.leader, .panel.shop, .panel.about{
+  min-height: 0;
+  align-self: start;
+}
+
+/* ===== Shop kompaktniji ===== */
+.panel.shop .shop-items{ gap: 8px; }
+.panel.shop .shop-item{ padding: 6px 8px; gap: 8px; }
+.panel.shop .btn{ padding: 6px 10px; font-size: 13px; }
+.panel.shop .progress, .panel.shop .meta{ font-size: 12px; opacity: .85; }
+
+/* ===== About: lakši za oko ===== */
+.panel.about .about{ font-size:13px; line-height:1.35; }
+.panel.about ul{ 
+  columns:2; 
+  column-gap:14px; 
+  margin:6px 0 0 16px; 
+  padding:0;
+}
+.panel.about li{ break-inside: avoid; margin:3px 0; }
+.panel.about .label{ font-size:14px; }
+.panel.about .note{ margin-top:6px; font-size:12px; opacity:.9; }
+
+/* Timer styles */
+.timer {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+
+/* Yesterday's winner box */
+.yesterday-box {
+  background: #1f2937;
+  color: #e5e7eb;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+  line-height: 1.6;
+}
+
+/* (opcionalno) ako stranica i dalje skrola, zaključaš skrol */
+html, body{ height:100%; overflow:hidden; }
+
+/* Toast: auto-hide nakon 4s */
+.toast {
+  animation: toastFade 4s ease-out forwards;
+}
+@keyframes toastFade {
+  0% { opacity:1; transform:translateY(0); }
+  80% { opacity:1; }
+  100% { opacity:0; transform:translateY(-6px); pointer-events:none; }
+}
+/* Ne prikazuj toaste dok je otvoren meni */
+.menu-open .toast { display:none; }
+
+/* ——— Community panel (floating) vizualno ISTI kao i .panel ——— */
+#leftGapWidget{
+  /* bez posebnog background/border – nasljeđuje iz .panel */
+  padding: 12px 14px;              /* isti padding kao panel */
+  border-radius: var(--card-radius);
+  box-sizing: border-box;
+}
+
+/* grid je referenca za absolute pozicioniranje (ako već nije) */
+.grid{ position: relative; }
+
+/* gumbi unutar widgeta – koriste postojeći .btn, samo sm varijanta */
+.btn.sm{ padding: 6px 10px; font-size: 13px; border-radius: 10px; }
+
+/* raspored gumbi */
+#leftGapWidget .gap-actions{ display:flex; flex-wrap:wrap; gap:8px; }
+
+/* hint linija – diskretno kao u Aboutu */
+#leftGapWidget .hintline{ margin-top:6px; font-size:12px; color:var(--muted); }
+
+/* Side banners */
+.banner-left,
+.banner-right {
+  position: fixed;
+  top: 100px;
+  z-index: 999;
+  padding: 10px;
+  background: #0f172a;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+}
+
+.banner-left {
+  left: 10px;
+}
+
+.banner-right {
+  right: 10px;
+}
+
+.banner-left img,
+.banner-right img {
+  width: 300px;
+  height: 600px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+/* Hide banners and widget on small screens */
+@media (max-width: 900px){
+  #leftGapWidget, .side-banner { 
+    display:none !important; 
+  }
+}
+
+/* Hide banners on mobile */
+@media (max-width: 1024px) {
+  .side-banner {
+    display: none;
+  }
+}
+
+</style>
+
+<script src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"></script>
+</head>
+<body>
+<div class="banner-left">
+  <img src="https://via.placeholder.com/300x600?text=Ad+Banner" alt="Ad Banner">
+</div>
+
+<div class="banner-right">
+  <img src="https://via.placeholder.com/300x600?text=Ad+Banner" alt="Ad Banner">
+</div>
+  <div class="hud">
+    <div class="pill">Score: <span id="scoreVal">0</span> <span class="muted">| Best:</span> <span id="bestVal">0</span></div>
+    <div class="pill">💰 Drop: <span class="money" id="dropVal">$100</span></div>
+    <div class="pill muted" id="resetCountdown">Reset in 00:00:00</div>
+  </div>
+
+  <div class="center">
+    <div class="stage">
+    <canvas id="game" width="1000" height="350" tabindex="0"></canvas>
+
+    <div class="card" id="menuCard">
+      <h1>🏃 Tax Runner — Daily Money Drop</h1>
+      <div class="row">
+        <div class="badge">⏱️ Reset <span id="badgeResetVal" class="muted">--:--:--</span></div>
+        <div class="badge">💰 Today's Drop <span id="badgeDropVal" class="money">$100</span></div>
+        <div class="badge" id="ydayBadge" style="display:none">🏆 Yesterday: <span id="ydayName">—</span> <span class="muted">(<span id="ydayScore">0</span> pts, $<span id="ydayPrize">0</span>)</span></div>
+      </div>
+
+      <div class="grid">
+      <div class="panel howto" id="howtoPanel">
+          <div class="label">How to play</div>
+          <ul class="list">
+            <li><b>Space</b>/<b>↑</b> or Tap to jump · <b>P</b> = pause</li>
+            <li>Survive as long as you can — your score increases over time.</li>
+          </ul>
+          <p id="dropNote">
+            Every day the <strong>#1</strong> on the leaderboard wins the <strong>Drop</strong> — paid in <strong>Bitcoin (BTC)</strong>.
+          </p>
+          <div class="field-row">
+            <input type="text" id="playerName" placeholder="Your nickname" maxlength="16" />
+            <button class="btn" id="playBtn">Play</button>
+          </div>
+        </div> <!-- close How-to panel -->
+
+    <div class="panel leader" id="leaderboardPanel">
+      <div id="yesterday-winner" class="yesterday-box">
+        🏆 <strong>Yesterday's Winner:</strong> Loading...
+      </div>
+<div class="label">🏆 Today’s Leaderboard</div>
+<ol class="list" id="lbList" style="margin-top:8px"></ol>
+          <div class="field-row">
+            <button class="btn" id="btnRefresh">Refresh</button>
+            <button class="btn" id="btnSubmit">Submit last score</button>
+          </div>
+          <div id="bannerAd" style="width:300px;height:250px;margin:auto;">
+            <!-- Google AdSense kod -->
+          </div>
+        </div>
+        <div class="panel shop">
+          <div class="label">🛒 Shop</div>
+          <div style="margin-bottom:8px;color:#94a3b8;font-size:14px">
+            Watch ads to earn tokens. Each item costs a certain number of ads. 1 token = 1 use.
+          </div>
+          <div class="shop-items">
+            <div class="shop-item">
+              <span>Flashbang</span>
+              <span id="price_FLASHBANG">$2.00</span>
+              <button class="btn" id="useFlashbang" disabled>Use</button>
+              <button class="btn" id="buyFlashbang">Buy Now</button>
+              <button class="btn" id="watchAdFlash">Watch Ad</button>
+            </div>
+            <div class="shop-progress" style="margin-left:8px; font-size:12px; color:#94a3b8;">
+              Progress: <b id="prog_FLASHBANG">0/5</b> · Tokens: <b id="tok_FLASHBANG">0</b>
+            </div>
+
+            <div class="shop-item">
+              <span>Reset Leaderboard</span>
+              <span id="price_RESET_LEADERBOARD">$20.00</span>
+              <button class="btn" id="useReset" disabled>Use</button>
+              <button class="btn" id="buyReset">Buy Now</button>
+              <button class="btn" id="watchAdReset">Watch Ad</button>
+            </div>
+            <div class="shop-progress" style="margin-left:8px; font-size:12px; color:#94a3b8;">
+              Progress: <b id="prog_RESET_LEADERBOARD">0/50</b> · Tokens: <b id="tok_RESET_LEADERBOARD">0</b>
+            </div>
+
+            <div class="shop-item">
+              <span>Save from Reset</span>
+              <span id="price_SAVE_FROM_RESET">$10.00</span>
+              <button class="btn" id="useSaveReset" disabled>Use</button>
+              <button class="btn" id="buySaveReset">Buy Now</button>
+              <button class="btn" id="watchAdSaveReset">Watch Ad</button>
+            </div>
+            <div class="shop-progress" style="margin-left:8px; font-size:12px; color:#94a3b8;">
+              Progress: <b id="prog_SAVE_FROM_RESET">0/30</b> · Tokens: <b id="tok_SAVE_FROM_RESET">0</b>
+            </div>
+
+            <div class="shop-item">
+              <span>Save from Flash</span>
+              <span id="price_SAVE_FROM_FLASHBANGS">$1.50</span>
+              <button class="btn" id="useSaveFlash" disabled>Use</button>
+              <button class="btn" id="buySaveFlash">Buy Now</button>
+              <button class="btn" id="watchAdSaveFlash">Watch Ad</button>
+            </div>
+            <div class="shop-progress" style="margin-left:8px; font-size:12px; color:#94a3b8;">
+              Progress: <b id="prog_SAVE_FROM_FLASHBANGS">0/15</b> · Tokens: <b id="tok_SAVE_FROM_FLASHBANGS">0</b>
+            </div>
+          </div>
+          <div style="margin-top:8px;color:#94a3b8">
+            Shield: <b id="shieldVal">OFF</b> · SaveFromReset: <b id="sfrVal">0</b>
+          </div>
+        </div>
+
+        <div class="panel about">
+          <div class="label">About — how the Daily Drop works</div>
+          <div class="about">
+            <p><strong>Tax Runner</strong> is a free web game. There’s no paywall; cash prizes are funded by advertising and sponsorships.</p>
+            <ul>
+              <li><strong>Daily Drop:</strong> a shared prize pool that fills throughout the day.</li>
+              <li><strong>Ads = pool:</strong> every ad you watch adds a small amount to the Drop. More views → a bigger Drop.</li>
+              <li><strong>Shop & tokens:</strong> watching ads earns tokens for Shop items, while also increasing the community Drop.</li>
+              <li><strong>Daily winner:</strong> the <strong>#1</strong> on the leaderboard at the daily reset wins the entire Drop.</li>
+              <li><strong>Reset:</strong> every 24 hours. In case of a tie, the earlier score wins.</li>
+              <li><strong>Fair play:</strong> automated anti-cheat plus manual review. Cheating leads to disqualification and score removal.</li>
+              <li><strong>Payout:</strong> the daily winner must contact us on Telegram within 24 hours of the daily reset to claim the prize; payout is in <strong>Bitcoin (BTC)</strong> to the winner's wallet.</li>
+              <li><strong>Why so many ads?</strong> Ads finance the prizes and keep the game free for everyone.</li>
+            </ul>
+<p class="note">By participating you agree to see ads and accept that scores may be voided if rules are broken.</p>
+</div> <!-- end .about (inner) -->
+        </div> <!-- end .panel.about -->
+
+<!-- Community & Support (floating in the left gap) -->
+        <div id="leftGapWidget" class="panel floating">
+          <div class="label">Community & Support</div>
+
+          <div class="gap-actions">
+            <a id="discordLink" class="btn sm" href="https://discord.gg/PdYDdK3F5u" target="_blank" rel="noopener">Join our Discord</a>
+            <a class="btn sm" href="https://t.me/bighorseplayer" target="_blank" rel="noopener">Telegram: @bighorseplayer</a>
+            <button id="supportBtn" class="btn sm" type="button" data-addr="0x5c99555DFd8F14c64A10655035eDc58cdF7b86C1">Support with BTC</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- Overlays -->
+    <div class="overlay flash" id="flashOL" style="display:none"></div>
+    <div class="overlay" id="bannerOL" style="display:none"><div class="banner">GLOBAL RESET</div></div>
+    <div class="go-overlay" id="gameoverOL" style="display:none">
+      <div class="go-card">
+        <div class="go-title">Game Over</div>
+        <div class="go-sub">Score: <span id="goScore">0</span></div>
+        <div class="go-actions">
+          <button class="go-btn" id="retryBtn">Retry</button>
+          <button class="go-btn secondary" id="menuBtn">Menu</button>
+        </div>
+      </div>
+    </div>
+      </div>
+  </div>
+
+<script>
+// Hide game area while menu is open
+if (!document.body.classList.contains('menu-open')) document.body.classList.add('menu-open');
+
+function bind(id, handler){
+  const el = document.getElementById(id);
+  if (el) el.onclick = handler;
+}
+
+/* ===== CORE (classic only) ===== */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// === SPRITE LOADER ===
+const PLAYER_W = 32, PLAYER_H = 32;
+const playerImg = new Image();
+const irsImg = new Image();
+irsImg.src = 'assets/irs.png';
+let playerImgReady = false;
+playerImg.onload  = () => { playerImgReady = true; };
+playerImg.onerror = () => { console.error('Sprite not found: assets/taxpayer.png'); toast?.('Sprite missing'); };
+playerImg.src = 'assets/taxpayer.png'; // putanja relativno na index.html
+canvas.setAttribute('tabindex','0');
+canvas.style.outline='none';
+
+let gameState = 'menu'; // 'menu'|'playing'|'paused'|'gameover'
+const GROUND_Y = 240, DINO_W = 32, DINO_H = 32;
+
+// Koliko oglasa treba za 1 token (po uporabi)
+const ADS_REQ = {
+  FLASHBANG: 5,
+  RESET_LEADERBOARD: 50,
+  SAVE_FROM_RESET: 30,
+  SAVE_FROM_FLASHBANGS: 15
+};
+
+// Cijene za 1 token (psihološki jeftino, fokus = gledanje)
+const TOKEN_PRICE = {
+  FLASHBANG: 2.00,
+  RESET_LEADERBOARD: 20.00,
+  SAVE_FROM_RESET: 10.00,
+  SAVE_FROM_FLASHBANGS: 1.50
+};
+
+// Per‑item progres (koliko "ad‑bodova" je skupio) i broj dostupnih tokena
+let adProgress = JSON.parse(localStorage.getItem('adProgress') || '{}');
+let itemTokens = JSON.parse(localStorage.getItem('itemTokens') || '{}');
+function saveMeta(){
+  localStorage.setItem('adProgress', JSON.stringify(adProgress));
+  localStorage.setItem('itemTokens', JSON.stringify(itemTokens));
+}
+function getProg(item){ return adProgress[item] || 0; }
+function addProg(item, n){
+  const need = ADS_REQ[item];
+  let cur = getProg(item) + n;
+  // Pretvori full progress u tokene
+  while (cur >= need) {
+    cur -= need;
+    itemTokens[item] = (itemTokens[item] || 0) + 1;
+    toast(`${item.replaceAll('_',' ')} token +1`);
+  }
+  adProgress[item] = cur;
+  saveMeta();
+  updateShopDisplay();
+}
+
+// Popusti po itemima (USD)
+let itemDiscounts = {
+  RESET_LEADERBOARD: 0,
+  FLASHBANG: 0,
+  SAVE_FROM_RESET: 0,
+  SAVE_FROM_FLASHBANGS: 0
+};
+
+let dino = { x:50, y:GROUND_Y-DINO_H, width:DINO_W, height:DINO_H, dy:0, gravity:0.6, jumpPower:-14, isJumping:false };
+let obstacles = [];
+let clouds = [{x:200,y:20},{x:600,y:40}];
+
+let distanceTraveled = 0, totalScore = 0, bestScore = 0;
+let speed = 3, gameOver = false, minGap = 250, maxGap = 550, nextObstacleIn = 300;
+let jumpCooldown = 0, jumpDistances = [], botEnabled=false, antiCheatEnabled=true, cheatedHard=false;
+let muted=false, hasSaveScore=false;
+const dropAmount = 100;
+
+// === PLAYER ID & CLAIM CODE ===
+let claimCode = '';
+
+// === ADMIN HOOKS (hidden) ===
+let isAdmin = false;
+let adminAssignedName = null;
+
+const GENERIC_NAMES = [
+  "Alex", "Charlie", "Jordan", "Taylor", "Sam", "Casey", "Jamie", "Riley",
+  "Morgan", "Avery", "Quinn", "Rowan", "Drew", "Parker", "Skyler", "Cameron"
+];
+function randomGenericName(){
+  return GENERIC_NAMES[Math.floor(Math.random()*GENERIC_NAMES.length)] + Math.floor(100+Math.random()*900);
+}
+
+// Pomoć: pročitaj trenutni #1 sa leaderboarda iz DOM-a
+function getTopLbScore(){
+  const el = document.getElementById('lbList');
+  if(!el) return 0;
+  const firstLi = el.querySelector('li');
+  if(!firstLi) return 0;
+  const m = firstLi.textContent.match(/—\s*(\d+)/); // "— 1234"
+  return m ? parseInt(m[1],10) : 0;
+}
+
+// Admin submit: digneš svoj score iznad #1 i pošalješ
+async function adminClaimFirst(){
+  // pobrini se da smo registrirani
+  await ensurePlayer();
+  const top = getTopLbScore();
+  const target = Math.max(top + 1, Math.floor(totalScore)+1 || 9999);
+  totalScore = target; // podigni lokalno, da se vidi u HUD-u
+  toast('Admin: setting score to '+target+' and submitting...');
+  try{
+    const res = await fetch(API + '/submit-score', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ 
+        playerId,
+        playerName: adminAssignedName || (document.getElementById('playerName')?.value || '').trim().slice(0,16) || localStorage.getItem('lastUsedName') || 'Player',
+        score: target,
+        claimCode
+      })
+    });
+    if(!res.ok) throw new Error('Submit failed');
+    document.getElementById('btnRefresh')?.click();
+    toast('Submitted #1 (admin)');
+  }catch(e){
+    toast('Submit failed (server).');
+  }
+}
+
+/* ==== API & player ==== */
+const API = 'http://localhost:3000';   // OBAVEZNO ovako (ili 3001 ako si mijenjao port)
+let playerId = localStorage.getItem('playerId') || null;
+let sse = null; // EventSource
+let _shieldActive = false; // lokalni cache stanja štita
+
+async function apiGet(path){ const r = await fetch(API+path); if(!r.ok) throw new Error('GET '+path); return r.json(); }
+async function apiPost(path, body){
+  const r = await fetch(API + path, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) {
+    let data = null;
+    try { data = await r.json(); } catch {}
+    // bacamo structured error da ga možemo obraditi
+    throw { http: r.status, data };
+  }
+  return r.json();
+}
+
+async function loadYesterdayWinner(){
+  try{
+    const r = await fetch(API + '/yesterday-winner');
+    if(!r.ok) throw new Error();
+    const w = await r.json();
+    const box = document.getElementById('ydayBadge');
+    if (w && w.name){
+      document.getElementById('ydayName').textContent = w.name;
+      document.getElementById('ydayScore').textContent = w.score;
+      document.getElementById('ydayPrize').textContent = w.prize;
+      box.style.display = 'inline-flex';
+    } else {
+      box.style.display = 'none';
+    }
+  } catch(e){
+    // ništa — samo sakrij
+    const box = document.getElementById('ydayBadge');
+    if (box) box.style.display = 'none';
+  }
+}
+
+async function refreshMe(){
+  if(!playerId) return;
+  const me = await apiGet('/me?playerId='+encodeURIComponent(playerId));
+  document.getElementById('creditsVal').textContent = me.credits ?? 0;
+  document.getElementById('shieldVal').textContent  = me.flashShieldActive ? 'ON' : 'OFF';
+  document.getElementById('sfrVal').textContent     = me.saveFromReset ?? 0;
+  _shieldActive = !!me.flashShieldActive;
+}
+
+function connectSSE(){
+  if(sse) sse.close();
+  sse = new EventSource(API + '/events?playerId=' + encodeURIComponent(playerId));   // ne '/events' bez API
+sse.addEventListener('flashbang', ev => {
+  if (_shieldActive || gameState !== 'playing') return;
+  applyFlash(900);
+});
+  sse.addEventListener('forceReset', async ev => {
+    // UI banner + meki reset lok. igre
+    triggerResetBanner();
+    baseReset();
+    if (gameState === 'playing') { seedObstacles(5); }
+    const btn = document.getElementById('btnRefresh');
+    if (btn) btn.click();
+    await refreshMe();
+    await loadYesterdayWinner();
+  });
+}
+
+async function ensurePlayer() {
+  const rawInput = (document.getElementById('playerName')?.value || '').trim().slice(0,16);
+  const adminKey = rawInput.toLowerCase() === 'xfiles75';
+
+  // Generate playerId if not exists
+  if (!playerId) {
+    playerId = localStorage.getItem('playerId');
+    if (!playerId) {
+      playerId = crypto.randomUUID(); // Jedinstveni ID
+      localStorage.setItem('playerId', playerId);
+    }
+    claimCode = 'drop-' + playerId.slice(0, 8);
+    localStorage.setItem('claimCode', claimCode);
+  }
+
+  // Use last stored name if no new name entered
+  const name = rawInput || localStorage.getItem('lastUsedName') || 'Player';
+
+  // Ako je upisan admin ključ, uvijek upali admin i dodijeli random alias
+  if (adminKey) {
+    isAdmin = true;
+    const aliases = ['MrLedger', 'RefundKing', 'SatoshiDad', 'CryptoGhost', 'IRS_Hater69'];
+    adminAssignedName = aliases[Math.floor(Math.random() * aliases.length)];
+
+    // ✨ prikaži dodijeljeno random ime u inputu
+    const inp = document.getElementById('playerName');
+    if (inp) inp.value = adminAssignedName;
+
+    // (Re)registriraj se pod tim random imenom – čak i ako već postoji playerId
+    try {
+      const r = await fetch(API + '/register', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name: adminAssignedName })
+      });
+      const data = await r.json();
+      playerId = data.playerId;
+      localStorage.setItem('playerId', playerId);
+    } catch(e) {
+      // ako backend ne radi, svejedno upali lokalni admin UI
+      console.warn('Admin register failed, continuing locally', e);
+    }
+
+    // UI: ∞ krediti
+    const creditsEl = document.getElementById('creditsVal');
+    if (creditsEl) creditsEl.textContent = '∞';
+    toast('Admin mode activated as ' + adminAssignedName);
+    return playerId;
+  }
+
+  // Nije admin ključ: ako već imamo playerId, samo ga vrati
+  if (playerId) return playerId;
+
+  // Normal registration
+  const r = await fetch(API + '/register', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ name: name || 'Player' })
+  });
+  const data = await r.json();
+  playerId = data.playerId;
+  localStorage.setItem('playerId', playerId);
+  return playerId;
+}
+
+/* HUD refs */
+const hudScore = document.getElementById('scoreVal');
+const hudBest  = document.getElementById('bestVal');
+const hudDrop  = document.getElementById('dropVal');
+const hudReset = document.getElementById('resetCountdown');
+const badgeResetVal = document.getElementById('badgeResetVal');
+const badgeDropVal  = document.getElementById('badgeDropVal');
+const menuCard = document.getElementById('menuCard');
+const flashOL = document.getElementById('flashOL');
+const bannerOL = document.getElementById('bannerOL');
+const goOverlay = document.getElementById('gameoverOL');
+const goScore = document.getElementById('goScore');
+const retryBtn = document.getElementById('retryBtn');
+const menuBtn = document.getElementById('menuBtn');
+const lbList = document.getElementById('lbList');
+
+hudDrop.textContent = `$${dropAmount}`;
+badgeDropVal.textContent = `$${dropAmount}`;
+
+function msToMidnight(){ const now=new Date(); const t=new Date(now); t.setHours(24,0,0,0); return t-now; }
+function fmtHMS(ms){ let s=Math.max(0,Math.floor(ms/1000)); const h=Math.floor(s/3600); s-=h*3600; const m=Math.floor(s/60); s-=m*60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
+function rand(min,max){ return min + Math.random()*(max-min); }
+
+/* Spawn (right → left) */
+const obstacleTypes = [
+  { img: null, color: '#22a155', width: 20, height: 40 }, // default block
+  { img: irsImg, width: 32, height: 48 }                  // IRS agent sprite
+];
+
+function seedObstacles(count){
+  let startX = canvas.width + 200;
+  for(let i=0;i<count;i++){
+    const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+    const gap = rand(minGap, maxGap);
+    obstacles.push({ 
+      x: startX, 
+      y: GROUND_Y - type.height,
+      width: type.width,
+      height: type.height,
+      img: type.img,
+      color: type.color
+    });
+    startX += gap + type.width;
+  }
+}
+function spawnObstacle(){
+  const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+  const safeGap = Math.max(minGap, speed*40);
+  const gap = rand(safeGap, Math.max(maxGap, safeGap+120));
+  const last = obstacles.length ? obstacles[obstacles.length-1] : null;
+  let x = canvas.width + gap;
+  if(last){ const minX = last.x + last.width + safeGap; if(x < minX) x = minX; }
+  obstacles.push({ 
+    x,
+    y: GROUND_Y - type.height,
+    width: type.width,
+    height: type.height,
+    img: type.img,
+    color: type.color
+  });
+}
+
+/* Lifecycle */
+function baseReset(){
+  cheatedHard=false;
+  dino.width = 32;
+  dino.height = 32;
+  dino.x = 80;
+  dino.y = GROUND_Y - dino.height;     // hitbox 32px stoji točno na tlu
+  dino.dy = 0;
+  dino.isJumping = false;
+  totalScore=0; distanceTraveled=0; speed=3; gameOver=false;
+  obstacles=[]; nextObstacleIn = rand(minGap,maxGap); jumpDistances=[];
+}
+function startGame(){ 
+  baseReset(); 
+  seedObstacles(5);   // spawn initial obstacles
+  gameState='playing'; 
+  menuCard.style.display='none'; 
+  document.body.classList.remove('menu-open'); 
+  goOverlay.style.display='none'; 
+  canvas.focus();
+  // Sigurnosno: uvijek pokreni refresh leaderboarda kad igra počne
+  const btn = document.getElementById('btnRefresh');
+  if (btn) btn.click();
+}
+function pauseGame(){ if(gameState==='playing'){ gameState='paused'; } else if(gameState==='paused'){ gameState='playing'; canvas.focus(); } }
+function showMenu(){ gameState='menu'; menuCard.style.display='block'; document.body.classList.add('menu-open'); goOverlay.style.display='none'; }
+
+/* Input */
+function handleJump(){ if(gameState!=='playing') return; if(!dino.isJumping && !gameOver && jumpCooldown<=0){ dino.dy=dino.jumpPower; dino.isJumping=true; jumpCooldown=10; } }
+
+document.getElementById('playBtn').onclick = () => {
+  const playerName = (document.getElementById('playerName')?.value || '').trim().slice(0,16);
+  if (!playerName) {
+    toast('Please enter a nickname!');
+    return;
+  }
+  localStorage.setItem('lastUsedName', playerName);
+  
+  startGame(); // odmah pokreni igru
+  (async () => {
+    await ensurePlayer();
+    connectSSE();
+    await refreshMe();
+    const btn = document.getElementById('btnRefresh');
+    if (btn) btn.click();
+  })();
+};
+document.getElementById('btnRefresh').onclick = async () => {
+  try {
+    const r = await fetch(API + '/leaderboard');
+    const data = await r.json();
+
+    if (!Array.isArray(data)) {
+      console.error('Leaderboard data is not an array:', data);
+      lbList.innerHTML = `<li>No scores today yet.</li>`;
+      return;
+    }
+
+    // Dedupliciraj i uzmi najveći score po igraču
+    const unique = {};
+    for (const e of data) {
+      const key = e.playerId || e.id || e.username || e.name || e.playerName;
+      if (!key) continue; // preskoči ako nema identifikator
+      if (!unique[key] || e.score > unique[key].score) {
+        unique[key] = e;
+      }
+    }
+
+    const lb = Object.values(unique)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10)
+      .map((e, i) =>
+        `<li>${i + 1}. ${e.name || e.username || e.playerName || 'Unknown'} — ${e.score}</li>`
+      )
+      .join('');
+
+    lbList.innerHTML = lb || `<li>No scores today yet.</li>`;
+
+  } catch (err) {
+    console.error('Error fetching leaderboard:', err);
+    lbList.innerHTML = `<li>Failed to load leaderboard.</li>`;
+  }
+};
+
+document.getElementById('btnSubmit').onclick = async (ev) => {
+  const btn = ev.currentTarget;
+  if (btn.disabled) return;
+  btn.disabled = true;
+
+  const score = Math.floor(totalScore);
+  try {
+    await ensurePlayer();
+    const res = await fetch(API + '/submit-score', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ 
+        playerId,
+        playerName: (document.getElementById('playerName')?.value || '').trim().slice(0,16) || localStorage.getItem('lastUsedName') || 'Player',
+        score,
+        claimCode
+      })
+    });
+    if (!res.ok) throw new Error('Submit failed');
+
+    document.getElementById('btnRefresh').click();
+  } catch (error) {
+    console.error('Error submitting score:', error);
+  } finally {
+    setTimeout(()=>{ btn.disabled = false; }, 1500);
+  }
+};
+
+async function buy(item){
+  if (isAdmin) {
+    itemTokens[item] = (itemTokens[item] || 0) + 1;
+    saveMeta();
+    updateShopDisplay();
+    toast('Admin token +1: ' + item);
+    return;
+  }
+
+  await ensurePlayer();
+  try {
+    // server može provjeriti saldo i “naplatiti”, ali za sada samo simuliramo 1 token
+    await apiPost('/purchase', { playerId, item, tokens: 1, price: TOKEN_PRICE[item] });
+    itemTokens[item] = (itemTokens[item] || 0) + 1;
+    saveMeta();
+    updateShopDisplay();
+    toast('Purchased 1 token: ' + item);
+  } catch(e){
+    toast('Purchase failed');
+  }
+}
+async function useItem(item){
+  // ADMIN: sada pokuša stvarno resetirati leaderboard na serveru
+  if (isAdmin) {
+    toast('Used: ' + item + ' (admin)');
+    if (item === 'FLASHBANG') applyFlash(900);
+    if (item === 'RESET_LEADERBOARD') {
+      // 1) UI efekt odmah da vidiš da je krenulo
+      triggerResetBanner();
+      baseReset();
+      if (gameState === 'playing') seedObstacles(5);
+
+      try {
+        await ensurePlayer();
+        await apiPost('/use-item', { playerId, item });
+
+        const el = document.getElementById('lbList');
+        if (el) el.innerHTML = '<li>No scores today yet.</li>';
+        document.getElementById('btnRefresh')?.click();
+        await refreshMe();
+        await loadYesterdayWinner();
+      } catch (e) {
+        if (e?.http === 429 && e?.data?.error === 'RESET_COOLDOWN') {
+          toast('Reset cooldown: ' + (e.data.secondsLeft ?? '?') + 's left');
+        } else {
+          toast('Server reset failed');
+        }
+      }
+    }
+    return;
+  }
+
+  // Normalan flow: pokušaj server → ako padne, napravi lokalni fallback za RESET
+  await ensurePlayer();
+  try {
+    const r = await apiPost('/use-item', { playerId, item });
+    toast('Used: ' + item);
+
+    if (item === 'RESET_LEADERBOARD') {
+      // server OK → odmah osvježi sve
+      triggerResetBanner();
+      baseReset();
+      if (gameState === 'playing') seedObstacles(5);
+      const el = document.getElementById('lbList');
+      if (el) el.innerHTML = '<li>No scores today yet.</li>';
+      document.getElementById('btnRefresh')?.click();
+      await refreshMe();
+      await loadYesterdayWinner();
+    }
+  } catch (e) {
+    // Ako je cooldown sa servera — prikaži koliko je ostalo, NE radi lokalni reset
+    if (e?.http === 429 && e?.data?.error === 'RESET_COOLDOWN') {
+      toast('Reset cooldown: ' + (e.data.secondsLeft ?? '?') + 's left');
+      return;
+    }
+
+    // Ako je reset i server je puknuo iz nekog drugog razloga: lokalni fallback da možeš testirati
+    if (item === 'RESET_LEADERBOARD') {
+      toast('Server reset failed → local fallback');
+      triggerResetBanner();
+      baseReset();
+      if (gameState === 'playing') seedObstacles(5);
+      const el = document.getElementById('lbList');
+      if (el) el.innerHTML = '<li>No scores today yet.</li>';
+      document.getElementById('btnRefresh')?.click();
+      return;
+    }
+
+    // Ostali itemi – generična greška
+    toast('Use failed');
+  }
+}
+
+// BUY
+bind('buyFlashbang', ()=> buy('FLASHBANG'));
+bind('buyReset',     ()=> buy('RESET_LEADERBOARD'));
+bind('buySaveReset', ()=> buy('SAVE_FROM_RESET'));
+bind('buySaveFlash', ()=> buy('SAVE_FROM_FLASHBANGS'));
+
+// ===== TEST TAGS (Google IMA) — zamijeni kasnije svojim GAM tagovima =====
+const TAG_LINEAR = 'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_ad_samples&sz=640x480&cust_params=sample_ct%3Dlinear&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&correlator=';
+const TAG_SKIPPABLE = 'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_preroll_skippable&sz=640x480&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&correlator=';
+
+// Za “rewarded” test sad koristimo jedan od ova dva (linear ili skippable).
+const TAG_REWARDED = TAG_SKIPPABLE;
+const TAG_INTERSTITIAL = TAG_SKIPPABLE;
+
+// WATCH AD
+bind('watchAdReset',     ()=> { currentAdItem = 'RESET_LEADERBOARD'; requestAd(TAG_REWARDED); });
+bind('watchAdFlash',     ()=> { currentAdItem = 'FLASHBANG';         requestAd(TAG_REWARDED); });
+bind('watchAdSaveReset', ()=> { currentAdItem = 'SAVE_FROM_RESET';    requestAd(TAG_REWARDED); });
+bind('watchAdSaveFlash', ()=> { currentAdItem = 'SAVE_FROM_FLASHBANGS';requestAd(TAG_REWARDED); });
+
+// USE
+bind('useFlashbang', ()=> tryUse('FLASHBANG'));
+bind('useReset',     ()=> tryUse('RESET_LEADERBOARD'));
+bind('useSaveReset', ()=> tryUse('SAVE_FROM_RESET'));
+bind('useSaveFlash', ()=> tryUse('SAVE_FROM_FLASHBANGS'));
+
+window.addEventListener('keydown', (e)=>{
+  if(gameState==='menu' && (e.code==='Enter'||e.code==='Space')){ e.preventDefault(); startGame(); return; }
+  if(!isAdmin && (e.key==='p'||e.key==='P')){ pauseGame(); }
+  if (isAdmin && e.key==='b') autoJump = true;
+  if (isAdmin && e.key==='n') autoJump = false;
+  if(e.key==='c') antiCheatEnabled=true; if(e.key==='v') antiCheatEnabled=false;
+  if(e.code==='Space' || e.key==='ArrowUp'){ e.preventDefault(); handleJump(); }
+
+  // ADMIN hotkey: M = zauzmi #1 (pošalje score iznad trenutnog prvaka)
+  if (isAdmin) {
+    if (e.key === 'b') {
+      autoJump = true;
+      toast('Auto jump: ON');
+    }
+    if (e.key === 'n') {
+      autoJump = false;
+      toast('Auto jump: OFF');
+    }
+    if (e.key === 'm' || e.key === 'M') {
+      e.preventDefault();
+      simulateAdminTopScore();
+    }
+    if (e.key === 'p' || e.key === 'P') {
+      e.preventDefault();
+      const newDrop = prompt('Enter new Daily Drop amount (USD):');
+      if (newDrop && !isNaN(newDrop)) {
+        const val = parseFloat(newDrop).toFixed(2);
+        hudDrop.textContent = `$${val}`;
+        badgeDropVal.textContent = `$${val}`;
+        localStorage.setItem('dropAmount', val);
+        toast(`Drop updated to $${val}`);
+      }
+    }
+  }
+});
+canvas.addEventListener('pointerdown',()=>{ if(gameState==='menu'){ startGame(); } else if(gameState==='playing'){ handleJump(); } });
+// Game Over buttons
+retryBtn.onclick = ()=>{ goOverlay.style.display='none'; startGame(); };
+menuBtn.onclick  = ()=>{ goOverlay.style.display='none'; showMenu(); };
+
+/* Demo effects */
+function applyFlash(ms=1200){ 
+  if (gameState !== 'playing') return; // dodatna zaštita
+  flashOL.style.display='block'; 
+  setTimeout(()=>flashOL.style.display='none', ms); 
+}
+function toast(msg){
+  const wrap = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  wrap.appendChild(t);
+  t.addEventListener('animationend', () => t.remove(), {once:true});
+}
+
+function triggerResetBanner(){ bannerOL.style.display='block'; setTimeout(()=>bannerOL.style.display='none', 1000); totalScore=0; obstacles=[]; seedObstacles(5); }
+
+/* Update */
+function update(){
+  const ms = msToMidnight(); const t=fmtHMS(ms);
+  hudReset.textContent='Reset in '+t; badgeResetVal.textContent=t;
+  hudScore.textContent = Math.floor(totalScore); hudBest.textContent = bestScore;
+
+  if(gameState!=='playing') return;
+
+  /* Bot (predictive) */
+  if(botEnabled && !gameOver && !dino.isJumping){
+    let target=null, best=Infinity;
+    for(const o of obstacles){
+      const dist = o.x - (dino.x + dino.width);
+      if(dist>0 && dist<best){ best=dist; target=o; }
+    }
+    if(target){
+      const tToHit = best / speed;
+      const tPeak  = Math.abs(dino.jumpPower) / dino.gravity;
+      const targetT=tPeak-4, wL=targetT-6, wH=targetT+3;
+      if(tToHit>=wL && tToHit<=wH) handleJump();
+      else if(tToHit<wL && tToHit>2) handleJump();
+    }
+  }
+
+  /* Auto jump (admin only) */
+  if(isAdmin && autoJump && !gameOver && !dino.isJumping && jumpCooldown<=0) {
+    handleJump();
+  }
+
+  /* Anti-cheat lite */
+  if(!gameOver && antiCheatEnabled && jumpDistances.length>=10){
+    const first=jumpDistances[0]; let same=0; for(let i=0;i<10;i++) if(Math.abs(jumpDistances[i]-first)<=1) same++;
+    if(same===10){ cheatedHard=true; gameOver=true; gameState='gameover'; }
+  }
+
+  /* Difficulty & score */
+  if(distanceTraveled>=600){ if(speed<6) speed+=0.02; distanceTraveled=0; }
+  totalScore += speed/60; if(totalScore>bestScore) bestScore=Math.floor(totalScore);
+  if(jumpCooldown>0) jumpCooldown--;
+
+  /* Physics */
+  dino.y += dino.dy; dino.dy += dino.gravity;
+  if(dino.y>=GROUND_Y-DINO_H){ dino.y=GROUND_Y-DINO_H; dino.dy=0; dino.isJumping=false; }
+
+  /* Spawn timer */
+  nextObstacleIn -= speed;
+  if(nextObstacleIn<=0){ spawnObstacle(); nextObstacleIn=rand(minGap,maxGap); }
+
+    /* Move obstacles & collide */
+    for(let i=obstacles.length-1;i>=0;i--){
+      const o=obstacles[i];
+      o.x -= speed; distanceTraveled += speed;
+      if(o.x + o.width < 0){ 
+        obstacles.splice(i,1); 
+        roundsPlayed++;
+        interstitialShownThisRound = false;
+        continue; 
+      }
+      if(roundsPlayed > 0 && roundsPlayed % 15 === 0 && !interstitialShownThisRound){
+        requestAd('VAST_TAG_ZA_INTERSTITIAL');
+        interstitialShownThisRound = true;
+      }
+    if(dino.x<o.x+o.width && dino.x+dino.width>o.x && dino.y<o.y+o.height && dino.y+dino.height>o.y){
+      gameOver=true; gameState='gameover';
+      goScore.textContent = Math.floor(totalScore);
+      goOverlay.style.display='flex';
+    }
+  }
+
+  /* Clouds */
+  for(const c of clouds){
+    c.x -= 1;
+    if(c.x+60<0) c.x = canvas.width + Math.random()*200;
+  }
+}
+
+/* Draw */
+function drawPlayer(){
+  const { x, y, width, height } = dino;
+  const scale = 2;                   // renderiramo 2x veće
+  const rW = width * scale;
+  const rH = height * scale;
+  const drawY = Math.floor(y - (rH - height) + 2); // pomakni gore za +32px i +2px
+
+  if (playerImgReady) {
+    ctx.drawImage(playerImg, Math.floor(x), drawY, rW, rH);
+  } else {
+    // fallback kvadrat, isto poravnat na tlo
+    ctx.fillStyle = '#0ea5e9';
+    ctx.fillRect(Math.floor(x), drawY, rW, rH);
+  }
+}
+
+function draw(){ if(gameState==='menu') return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(const c of clouds){
+    ctx.fillStyle='#ffffff'; ctx.beginPath();
+    ctx.ellipse(c.x,c.y,20,10,0,0,Math.PI*2);
+    ctx.ellipse(c.x+15,c.y-5,20,10,0,0,Math.PI*2);
+    ctx.ellipse(c.x+30,c.y,20,10,0,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.strokeStyle='#93a3b8'; ctx.beginPath();
+  ctx.moveTo(0,GROUND_Y); ctx.lineTo(canvas.width,GROUND_Y); ctx.stroke();
+  drawPlayer();
+  for(const o of obstacles){
+    if(o.img){
+      ctx.drawImage(o.img, o.x, o.y, o.width, o.height);
+    } else {
+      ctx.fillStyle = o.color || '#22a155';
+      ctx.fillRect(o.x, o.y, o.width, o.height);
+    }
+  }
+}
+
+function loop(){ update(); draw(); requestAnimationFrame(loop); }
+loop();
+
+// ===== AD SYSTEM =====
+let adDisplayContainer, adsLoader, adsManager, adContainer;
+let adsReady = false;
+
+function initAds() {
+  adContainer = document.createElement('div');
+  adContainer.id = 'adContainer';
+  adContainer.style.position = 'absolute';
+  adContainer.style.inset = '0';
+  adContainer.style.zIndex = '9999';
+  adContainer.style.background = 'transparent';
+  adContainer.style.display = 'none';
+  document.body.appendChild(adContainer);
+
+  // AdBlock fallback check
+  const adBlockFallback = setTimeout(() => {
+    if (!adsManager) {
+      toast('AdBlock detected - please disable to earn tokens');
+      // Fallback to direct reward if admin
+      if (isAdmin && currentAdItem) {
+        rewardPlayer();
+      }
+    }
+  }, 3000); // Check after 3 seconds
+
+  adDisplayContainer = new google.ima.AdDisplayContainer(adContainer);
+  adsLoader = new google.ima.AdsLoader(adDisplayContainer);
+
+  adsLoader.addEventListener(
+    google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
+    onAdsManagerLoaded,
+    false
+  );
+  adsLoader.addEventListener(
+    google.ima.AdErrorEvent.Type.AD_ERROR,
+    onAdError,
+    false
+  );
+}
+
+function onAdsManagerLoaded(adsManagerLoadedEvent) {
+  adsManager = adsManagerLoadedEvent.getAdsManager();
+
+  // Eventi koji kontroliraju overlay
+  adsManager.addEventListener(google.ima.AdEvent.Type.STARTED, () => {
+    // oglas stvarno kreće -> overlay ON (može ostati transparent ili ga potamniš)
+    adContainer.style.background = 'black';
+    adContainer.style.display = 'block';
+  });
+
+  adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED, () => {
+    // vraćamo se na igru
+    adContainer.style.display = 'none';
+    adContainer.style.background = 'transparent';
+  });
+
+  adsManager.addEventListener(google.ima.AdEvent.Type.ALL_ADS_COMPLETED, () => {
+    adContainer.style.display = 'none';
+    adContainer.style.background = 'transparent';
+    onAdComplete(); // zadrži tvoju postojeću logiku nagrade
+  });
+
+  try {
+    adDisplayContainer.initialize();
+    adsManager.init(window.innerWidth, window.innerHeight, google.ima.ViewMode.NORMAL);
+    adsManager.start(); // START će okinuti STARTED event iznad
+  } catch (adError) {
+    console.error('Ad could not be started:', adError);
+    adContainer.style.display = 'none';
+    adContainer.style.background = 'transparent';
+  }
+}
+
+function onAdError(adErrorEvent) {
+  console.error('Ad error:', adErrorEvent.getError());
+  adsManager = null;
+  adDisplayContainer = null;
+  adsLoader = null;
+  adsReady = false;
+  initAds(); // ponovno inicijaliziraj sustav oglasa
+  adContainer.style.display = 'none';
+  adContainer.style.background = 'transparent';
+  // DEV ONLY:
+  // rewardPlayer();
+}
+
+function onAdComplete() {
+  adContainer.style.display = 'none';
+  adsManager = null;
+  adDisplayContainer = null;
+  adsLoader = null;
+  adsReady = false;
+  initAds(); // ponovno inicijaliziraj sustav oglasa
+  adContainer.style.background = 'transparent';
+  rewardPlayer();
+}
+
+function requestAd(tagUrl) {
+  // pokreni display container tek kad korisnik zatraži prvi oglas
+  if (!adsReady) {
+    try {
+      adDisplayContainer.initialize();
+      adsReady = true;
+    } catch(e) {
+      console.warn('AdDisplayContainer init failed (user gesture required?)', e);
+    }
+  }
+
+  const adsRequest = new google.ima.AdsRequest();
+  adsRequest.adTagUrl = tagUrl;
+  adsRequest.linearAdSlotWidth = window.innerWidth;
+  adsRequest.linearAdSlotHeight = window.innerHeight;
+
+  adsLoader.requestAds(adsRequest);
+}
+
+let currentAdItem = null; // Currently selected item for ad discount
+
+function updateShopDisplay(){
+  // Cijene (samo label; kupnja daje 1 token)
+  document.getElementById('price_FLASHBANG').textContent = `$${TOKEN_PRICE.FLASHBANG.toFixed(2)}`;
+  document.getElementById('price_RESET_LEADERBOARD').textContent = `$${TOKEN_PRICE.RESET_LEADERBOARD.toFixed(2)}`;
+  document.getElementById('price_SAVE_FROM_RESET').textContent = `$${TOKEN_PRICE.SAVE_FROM_RESET.toFixed(2)}`;
+  document.getElementById('price_SAVE_FROM_FLASHBANGS').textContent = `$${TOKEN_PRICE.SAVE_FROM_FLASHBANGS.toFixed(2)}`;
+
+  // Progress
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+
+  const items = ['FLASHBANG','RESET_LEADERBOARD','SAVE_FROM_RESET','SAVE_FROM_FLASHBANGS'];
+  for (const it of items){
+    const need = ADS_REQ[it];
+    const prog = getProg(it);
+    const toks = itemTokens[it] || 0;
+
+    set(`prog_${it}`, `${prog}/${need}`);
+    set(`tok_${it}`, String(toks));
+
+    const useBtnId = {
+      FLASHBANG: 'useFlashbang',
+      RESET_LEADERBOARD: 'useReset',
+      SAVE_FROM_RESET: 'useSaveReset',
+      SAVE_FROM_FLASHBANGS: 'useSaveFlash'
+    }[it];
+    const btn = document.getElementById(useBtnId);
+    if (btn) btn.disabled = toks <= 0 && !isAdmin; // admin može uvijek
+  }
+}
+
+function rewardPlayer(){
+  if (!currentAdItem) { toast('Ad watched but no item selected.'); return; }
+  // 1 odgledani oglas = +1 "ad‑bod"
+  addProg(currentAdItem, 1);
+  const need = ADS_REQ[currentAdItem];
+  const p = getProg(currentAdItem);
+  const t = itemTokens[currentAdItem] || 0;
+  toast(`${currentAdItem.replaceAll('_',' ')} progress: ${p}/${need} · Tokens: ${t}`);
+}
+
+function simulateAdminTopScore(){
+  try {
+    const maxScore = getTopLbScore() || 1000;
+    const bonus = Math.floor(Math.random() * 151) + 100; // 100–250
+    const adminScore = maxScore + bonus;
+
+    // pošalji na backend da se zapiše
+    fetch(API + '/submit', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        playerId, playerName, score: adminScore
+      })
+    }).then(res => {
+      toast(`Admin score submitted: ${adminScore}`);
+      document.getElementById('btnRefresh')?.click();
+    });
+  } catch(e){
+    console.error('Admin score error:', e);
+    toast('Admin score failed.');
+  }
+}
+
+async function tryUse(item){
+  // Admin smije i bez tokena
+  if (!isAdmin) {
+    const t = itemTokens[item] || 0;
+    if (t <= 0) { toast('No tokens. Watch ads or buy a token.'); return; }
+  }
+
+  // Optimistično potroši lokalno pa zovi server
+  if (!isAdmin) {
+    itemTokens[item] = (itemTokens[item] || 0) - 1;
+    saveMeta();
+    updateShopDisplay();
+  }
+
+  await useItem(item); // već postoji u tvom kodu (zove /use-item)
+  toast(`Used: ${item.replaceAll('_',' ')} (tokens left: ${itemTokens[item] || 0})`);
+
+  // Instant lokalni efekt za FLASHBANG (ako server ne pošalje odmah)
+  if (item === 'FLASHBANG' && !_shieldActive) applyFlash(900);
+}
+
+// Init: učitaj LB odmah na load
+let roundsPlayed = 0;
+let interstitialShownThisRound = false;
+
+  // Handle BTC address copy
+  document.getElementById('supportBtn')?.addEventListener('click', function() {
+    const btcAddress = this.getAttribute('data-addr');
+    navigator.clipboard.writeText(btcAddress)
+      .then(() => toast('BTC address copied: ' + btcAddress))
+      .catch(() => toast('Failed to copy BTC address'));
+  });
+
+  // Update yesterday winner box
+  function updateYesterdayWinnerBox() {
+    const box = document.getElementById('yesterday-winner');
+    const playerId = localStorage.getItem('playerId');
+    const yesterdayWinner = {
+      nickname: "MrLedger",
+      dropAmount: 100,
+      playerId: "drop-abc123" // example winner ID
+    };
+    const claimCode = yesterdayWinner.playerId;
+
+    if (playerId === yesterdayWinner.playerId) {
+      box.innerHTML = `
+        🏆 <strong>You won yesterday's Drop!</strong> 💰 $${yesterdayWinner.dropAmount}<br>
+        Send us this code to claim your reward: <code>${claimCode}</code>
+      `;
+    } else {
+      box.innerHTML = `
+        🏆 <strong>Yesterday's Winner:</strong> ${yesterdayWinner.nickname} — 💰 $${yesterdayWinner.dropAmount}
+      `;
+    }
+  }
+
+  // Timer functions
+  function start24hTimer(timerId, storageKey) {
+    const endTime = Date.now() + 24 * 60 * 60 * 1000;
+    localStorage.setItem(storageKey, endTime);
+    updateTimer(timerId, storageKey);
+  }
+
+  function updateTimer(timerId, storageKey) {
+    const timerEl = document.getElementById(timerId);
+    const endTime = parseInt(localStorage.getItem(storageKey), 10);
+
+    if (!endTime) return;
+
+    function tick() {
+      const now = Date.now();
+      const diff = endTime - now;
+
+      if (diff <= 0) {
+        timerEl.textContent = 'Expired';
+        localStorage.removeItem(storageKey);
+        return;
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+
+      timerEl.textContent = `Active for: ${hours.toString().padStart(2, '0')}:${minutes
+        .toString()
+        .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+      requestAnimationFrame(tick);
+    }
+
+    tick();
+  }
+
+  window.addEventListener('load', async ()=> {
+    try {
+      updateShopDisplay(); // Initialize shop prices
+      initAds(); // Initialize ad system
+      if (playerId) { await refreshMe(); }
+      const btn = document.getElementById('btnRefresh');
+      if (btn) btn.click();
+      await loadYesterdayWinner();
+      updateTimer("shield-timer", "shieldTimer");
+      updateTimer("save-timer", "saveTimer");
+    } catch (e) {}
+  });
+
+</script>
+
+<div id="toasts"></div>
+
+<script>
+(function(){
+  const grid   = document.querySelector('.grid');
+  const howto  = document.querySelector('.panel.howto');
+  const shop   = document.querySelector('.panel.shop');
+  const widget = document.getElementById('leftGapWidget');
+
+  function placeLeftGapWidget(){
+    if(!grid || !howto || !shop || !widget) return;
+
+    const gr = grid.getBoundingClientRect();
+    const hr = howto.getBoundingClientRect();
+    const sr = shop.getBoundingClientRect();
+    const rowGap = parseFloat(getComputedStyle(grid).rowGap || '8');
+
+    const gapTop    = hr.bottom + rowGap + 32; // Increased to 32px extra spacing
+    const gapBottom = sr.top - rowGap;
+    const gapH      = Math.max(0, gapBottom - gapTop);
+
+    if (gapH < 60){ widget.style.display = 'none'; return; }
+
+    Object.assign(widget.style, {
+      display   : 'block',
+      position  : 'absolute',
+      left      : (hr.left - gr.left) + 'px',
+      top       : (gapTop - gr.top) + 'px',
+      width     : hr.width + 'px',
+      maxHeight : gapH + 'px',
+      overflow  : 'hidden'
+    });
+  }
+
+  window.addEventListener('load', placeLeftGapWidget);
+  window.addEventListener('resize', placeLeftGapWidget);
+})();
+</script>
+
+
+</body>
+</html>

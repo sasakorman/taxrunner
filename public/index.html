@@ -410,16 +410,14 @@ html, body{ height:100%; overflow:hidden; }
 </div> <!-- end .about (inner) -->
         </div> <!-- end .panel.about -->
 
-<!-- Community & Support (floating in the left gap) -->
-        <div id="leftGapWidget" class="panel floating">
+<!-- Community & Support (fixed bubble, no JS) -->
+        <div class="panel bubble">
           <div class="label">Community & Support</div>
-
           <div class="gap-actions">
             <a id="discordLink" class="btn sm" href="https://discord.gg/PdYDdK3F5u" target="_blank" rel="noopener">Join our Discord</a>
             <a class="btn sm" href="https://t.me/bighorseplayer" target="_blank" rel="noopener">Telegram: @bighorseplayer</a>
             <button id="supportBtn" class="btn sm" type="button" data-addr="0x5c99555DFd8F14c64A10655035eDc58cdF7b86C1">Support with BTC</button>
           </div>
-
         </div>
       </div>
     </div>
@@ -579,7 +577,10 @@ async function adminClaimFirst(){
 }
 
 /* ==== API & player ==== */
-const API = ''; // same-origin na Renderu
+// Ako je lokalno ili file:// -> gađaj lokalni server; inače koristi same-origin
+const API = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname.startsWith('127.'))
+  ? 'http://localhost:3000'
+  : '';
 let playerId = localStorage.getItem('playerId') || null;
 let sse = null; // EventSource
 let _shieldActive = false; // lokalni cache stanja štita
@@ -623,11 +624,27 @@ async function loadYesterdayWinner(){
 
 async function refreshMe(){
   if(!playerId) return;
-  const me = await apiGet('/me?playerId='+encodeURIComponent(playerId));
-  document.getElementById('creditsVal').textContent = me.credits ?? 0;
-  document.getElementById('shieldVal').textContent  = me.flashShieldActive ? 'ON' : 'OFF';
-  document.getElementById('sfrVal').textContent     = me.saveFromReset ?? 0;
-  _shieldActive = !!me.flashShieldActive;
+  
+  try {
+    const me = await apiGet('/me?playerId=' + encodeURIComponent(playerId));
+    
+    // Safely update credits display
+    const creditsEl = document.getElementById('creditsVal');
+    if(creditsEl) creditsEl.textContent = me.credits ?? 0;
+    
+    // Safely update shield status
+    const shieldEl = document.getElementById('shieldVal');
+    if(shieldEl) shieldEl.textContent = me.flashShieldActive ? 'ON' : 'OFF';
+    
+    // Safely update save from reset count
+    const sfrEl = document.getElementById('sfrVal');
+    if(sfrEl) sfrEl.textContent = me.saveFromReset ?? 0;
+    
+    _shieldActive = !!me.flashShieldActive;
+  } catch(e) {
+    console.warn('Failed to refresh player data:', e);
+    // Silently fail - UI will show old values
+  }
 }
 
 function connectSSE(){
@@ -650,67 +667,59 @@ sse.addEventListener('flashbang', ev => {
 }
 
 async function ensurePlayer() {
-  const rawInput = (document.getElementById('playerName')?.value || '').trim().slice(0,16);
-  const adminKey = rawInput.toLowerCase() === 'xfiles75';
+  const rawName = (document.getElementById('playerName')?.value || '').trim().slice(0,16)
+                  || localStorage.getItem('lastUsedName') || 'Player';
 
-  // Generate playerId if not exists
-  if (!playerId) {
-    playerId = localStorage.getItem('playerId');
-    if (!playerId) {
-      playerId = crypto.randomUUID(); // Jedinstveni ID
-      localStorage.setItem('playerId', playerId);
-    }
-    claimCode = 'drop-' + playerId.slice(0, 8);
-    localStorage.setItem('claimCode', claimCode);
-  }
-
-  // Use last stored name if no new name entered
-  const name = rawInput || localStorage.getItem('lastUsedName') || 'Player';
-
-  // Ako je upisan admin ključ, uvijek upali admin i dodijeli random alias
-  if (adminKey) {
+  // Check for admin key
+  if (rawName.toLowerCase() === 'xfiles75') {
     isAdmin = true;
     const aliases = ['MrLedger', 'RefundKing', 'SatoshiDad', 'CryptoGhost', 'IRS_Hater69'];
     adminAssignedName = aliases[Math.floor(Math.random() * aliases.length)];
-
-    // ✨ prikaži dodijeljeno random ime u inputu
+    
+    // Show assigned name in input
     const inp = document.getElementById('playerName');
     if (inp) inp.value = adminAssignedName;
 
-    // (Re)registriraj se pod tim random imenom – čak i ako već postoji playerId
+    // Always register admin on server
     try {
-      const r = await fetch(API + '/register', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ name: adminAssignedName })
-      });
-      const data = await r.json();
-      playerId = data.playerId;
+      const reg = await apiPost('/register', { name: adminAssignedName });
+      playerId = reg.playerId;
+      claimCode = reg.claimCode;
       localStorage.setItem('playerId', playerId);
+      localStorage.setItem('claimCode', claimCode);
+      
+      // UI: ∞ credits
+      const creditsEl = document.getElementById('creditsVal');
+      if (creditsEl) creditsEl.textContent = '∞';
+      toast('Admin mode activated as ' + adminAssignedName);
+      return playerId;
     } catch(e) {
-      // ako backend ne radi, svejedno upali lokalni admin UI
-      console.warn('Admin register failed, continuing locally', e);
+      console.warn('Admin register failed', e);
+      toast('Admin mode failed - using local ID');
+      playerId = crypto.randomUUID();
+      localStorage.setItem('playerId', playerId);
+      return playerId;
     }
-
-    // UI: ∞ krediti
-    const creditsEl = document.getElementById('creditsVal');
-    if (creditsEl) creditsEl.textContent = '∞';
-    toast('Admin mode activated as ' + adminAssignedName);
-    return playerId;
   }
 
-  // Nije admin ključ: ako već imamo playerId, samo ga vrati
-  if (playerId) return playerId;
+  // If we have local playerId, first check if it exists on server
+  if (playerId) {
+    try {
+      await apiGet('/me?playerId=' + encodeURIComponent(playerId));
+      claimCode = localStorage.getItem('claimCode') || ('drop-' + playerId.slice(0,8));
+      return playerId; // player exists on server
+    } catch (_) {
+      // player doesn't exist on server -> register below
+    }
+  }
 
-  // Normal registration
-  const r = await fetch(API + '/register', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ name: name || 'Player' })
-  });
-  const data = await r.json();
-  playerId = data.playerId;
+  // Always register on server to get valid playerId
+  const reg = await apiPost('/register', { name: rawName });
+  playerId  = reg.playerId;
+  claimCode = reg.claimCode;
   localStorage.setItem('playerId', playerId);
+  localStorage.setItem('claimCode', claimCode);
+  localStorage.setItem('lastUsedName', rawName);
   return playerId;
 }
 
@@ -851,16 +860,16 @@ document.getElementById('playBtn').onclick = () => {
     if (btn) btn.click();
   })();
 };
-document.getElementById('btnRefresh').onclick = async () => {
-  try {
-    const r = await fetch(API + '/leaderboard');
-    const data = await r.json();
+    document.getElementById('btnRefresh').onclick = async () => {
+      try {
+        const r = await fetch(API + '/leaderboard');
+        const data = await r.json();
 
-    if (!Array.isArray(data)) {
-      console.error('Leaderboard data is not an array:', data);
-      lbList.innerHTML = `<li>No scores today yet.</li>`;
-      return;
-    }
+        if (!Array.isArray(data)) {
+          console.error('Leaderboard data is not an array:', data);
+          lbList.innerHTML = `<li>No scores today yet.</li>`;
+          return;
+        }
 
     // Dedupliciraj i uzmi najveći score po igraču
     const unique = {};
@@ -888,24 +897,24 @@ document.getElementById('btnRefresh').onclick = async () => {
   }
 };
 
-document.getElementById('btnSubmit').onclick = async (ev) => {
-  const btn = ev.currentTarget;
-  if (btn.disabled) return;
-  btn.disabled = true;
+    document.getElementById('btnSubmit').onclick = async (ev) => {
+      const btn = ev.currentTarget;
+      if (btn.disabled) return;
+      btn.disabled = true;
 
-  const score = Math.floor(totalScore);
-  try {
-    await ensurePlayer();
-    const res = await fetch(API + '/submit-score', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ 
-        playerId,
-        playerName: (document.getElementById('playerName')?.value || '').trim().slice(0,16) || localStorage.getItem('lastUsedName') || 'Player',
-        score,
-        claimCode
-      })
-    });
+      const score = Math.floor(totalScore);
+      try {
+        await ensurePlayer();
+        const res = await fetch(API + '/submit-score', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ 
+            playerId,
+            playerName: (document.getElementById('playerName')?.value || '').trim().slice(0,16) || localStorage.getItem('lastUsedName') || 'Player',
+            score,
+            claimCode
+          })
+        });
     if (!res.ok) throw new Error('Submit failed');
 
     document.getElementById('btnRefresh').click();
@@ -1386,11 +1395,13 @@ function simulateAdminTopScore(){
     const adminScore = maxScore + bonus;
 
     // pošalji na backend da se zapiše
-    fetch(API + '/submit', {
+    fetch(API + '/submit-score', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
-        playerId, playerName, score: adminScore
+        playerId, 
+        playerName: (document.getElementById('playerName')?.value || '').trim().slice(0,16) || localStorage.getItem('lastUsedName') || 'Player',
+        score: adminScore
       })
     }).then(res => {
       toast(`Admin score submitted: ${adminScore}`);
@@ -1535,11 +1546,11 @@ let interstitialShownThisRound = false;
     const sr = shop.getBoundingClientRect();
     const rowGap = parseFloat(getComputedStyle(grid).rowGap || '8');
 
-    const gapTop    = hr.bottom + rowGap + 32; // Increased to 32px extra spacing
+    const gapTop    = hr.bottom + rowGap - 10;   // move up 10px
     const gapBottom = sr.top - rowGap;
     const gapH      = Math.max(0, gapBottom - gapTop);
 
-    if (gapH < 60){ widget.style.display = 'none'; return; }
+    if (gapH < 14){ widget.style.display = 'none'; return; }
 
     Object.assign(widget.style, {
       display   : 'block',
@@ -1635,7 +1646,7 @@ let interstitialShownThisRound = false;
     transform: translate(-50%,-50%) scale(0.88) !important;
     transform-origin: top center !important;
   }
-  .grid{ row-gap: 6px !important; }
+  .grid{ row-gap: 16px !important; }
   .panel{ padding: 12px 12px !important; }
   .panel .label{ margin-bottom: 6px !important; }
 }

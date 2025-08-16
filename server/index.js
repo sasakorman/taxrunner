@@ -30,6 +30,10 @@ const port = process.env.PORT || 3000;
 app.use((req, res, next) => {
   const host = req.hostname;
   const isHttps = req.secure;
+  // Skip redirect if already on www subdomain or health check
+  if (host === 'www.taxrunner.online' || req.path === '/health') {
+    return next();
+  }
   if (!isHttps || host === 'taxrunner.online') {
     return res.redirect(301, `https://www.taxrunner.online${req.originalUrl}`);
   }

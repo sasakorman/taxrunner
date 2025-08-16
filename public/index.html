@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="icon" href="/favicon.ico">
 <!-- Google AdSense -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9184399190245939" crossorigin="anonymous"></script>
 <meta charset="UTF-8" />
@@ -40,7 +41,23 @@
   .field-row{display:flex; gap:8px; align-items:center; margin-top:12px}
   input[type="text"]{background:#0b1324; color:#e5e7eb; border-radius:10px; border:1px solid #1f2a44; padding:10px 12px; outline:none; width:220px}
   .overlay{position:absolute; inset:0; pointer-events:none}
-  .flash{background:rgba(255,255,255,.95)}
+  /* Flashbang overlay */
+  #flashOL{
+    pointer-events:none;
+    background: radial-gradient(circle at 50% 50%,
+      rgba(255,255,255,1) 0%,
+      rgba(255,255,255,.95) 25%,
+      rgba(255,255,255,.55) 55%,
+      rgba(255,255,255,0) 75%);
+    opacity:0;
+  }
+  #flashOL.play{ animation: flashBang 750ms ease-out forwards; }
+  @keyframes flashBang{
+    0%   { opacity:0;   filter: blur(0px) saturate(1.0); }
+    10%  { opacity:1;   filter: blur(2px) saturate(1.3); }
+    50%  { opacity:.6;  filter: blur(1px) saturate(1.1); }
+    100% { opacity:0;   filter: blur(0px) saturate(1.0); }
+  }
   .banner{position:absolute; top:10px; left:50%; transform:translateX(-50%); background:var(--danger); color:#fff; padding:8px 12px; border-radius:999px; font-weight:800}
   .label{font-weight:700; color:#bcd1ff}
   .center{position:relative; width:100%; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px 16px}
@@ -182,17 +199,6 @@
   margin-top: 6px;
 }
 
-/* Yesterday's winner box */
-.yesterday-box {
-  background: #1f2937;
-  color: #e5e7eb;
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 14px;
-  margin-bottom: 12px;
-  box-shadow: var(--shadow);
-  line-height: 1.6;
-}
 
 /* (opcionalno) ako stranica i dalje skrola, zaključaš skrol */
 html, body{ height:100%; overflow:hidden; }
@@ -273,7 +279,7 @@ html, body{ height:100%; overflow:hidden; }
 
 </style>
 
-<script src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"></script>
+<script async src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"></script>
 </head>
 <body>
 <!-- LEFT 300x600 -->
@@ -306,18 +312,17 @@ html, body{ height:100%; overflow:hidden; }
       <div class="row">
         <div class="badge">⏱️ Reset <span id="badgeResetVal" class="muted">--:--:--</span></div>
         <div class="badge">💰 Today's Drop <span id="badgeDropVal" class="money">$100</span></div>
-        <div class="badge" id="ydayBadge" style="display:none">🏆 Yesterday: <span id="ydayName">—</span> <span class="muted">(<span id="ydayScore">0</span> pts, $<span id="ydayPrize">0</span>)</span></div>
       </div>
 
       <div class="grid">
       <div class="panel howto" id="howtoPanel">
           <div class="label">How to play</div>
           <ul class="list">
-            <li><b>Space</b>/<b>↑</b> or Tap to jump · <b>P</b> = pause</li>
+            <li><b>Space</b>/<b>↑</b> or Tap to jump</li>
             <li>Survive as long as you can — your score increases over time.</li>
           </ul>
           <p id="dropNote">
-            Every day the <strong>#1</strong> on the leaderboard wins the <strong>Drop</strong> — paid in <strong>Bitcoin (BTC)</strong>.
+            Every day the <strong>#1</strong> on the leaderboard wins the <strong>Drop</strong> — paid in <strong>Ethereum (ETH)</strong>.
           </p>
           <div class="field-row">
             <input type="text" id="playerName" placeholder="Your nickname" maxlength="16" />
@@ -326,9 +331,6 @@ html, body{ height:100%; overflow:hidden; }
         </div> <!-- close How-to panel -->
 
     <div class="panel leader" id="leaderboardPanel">
-      <div id="yesterday-winner" class="yesterday-box">
-        🏆 <strong>Yesterday's Winner:</strong> Loading...
-      </div>
 <div class="label">🏆 Today’s Leaderboard</div>
 <ol class="list" id="lbList" style="margin-top:8px"></ol>
           <div class="field-row">
@@ -347,7 +349,6 @@ html, body{ height:100%; overflow:hidden; }
               <span>Flashbang</span>
               <span id="price_FLASHBANG">$2.00</span>
               <button class="btn" id="useFlashbang" disabled>Use</button>
-              <button class="btn" id="buyFlashbang">Buy Now</button>
               <button class="btn" id="watchAdFlash">Watch Ad</button>
             </div>
             <div class="shop-progress" style="margin-left:8px; font-size:12px; color:#94a3b8;">
@@ -358,7 +359,6 @@ html, body{ height:100%; overflow:hidden; }
               <span>Reset Leaderboard</span>
               <span id="price_RESET_LEADERBOARD">$20.00</span>
               <button class="btn" id="useReset" disabled>Use</button>
-              <button class="btn" id="buyReset">Buy Now</button>
               <button class="btn" id="watchAdReset">Watch Ad</button>
             </div>
             <div class="shop-progress" style="margin-left:8px; font-size:12px; color:#94a3b8;">
@@ -368,8 +368,6 @@ html, body{ height:100%; overflow:hidden; }
             <div class="shop-item">
               <span>Save from Reset</span>
               <span id="price_SAVE_FROM_RESET">$10.00</span>
-              <button class="btn" id="useSaveReset" disabled>Use</button>
-              <button class="btn" id="buySaveReset">Buy Now</button>
               <button class="btn" id="watchAdSaveReset">Watch Ad</button>
             </div>
             <div class="shop-progress" style="margin-left:8px; font-size:12px; color:#94a3b8;">
@@ -379,8 +377,6 @@ html, body{ height:100%; overflow:hidden; }
             <div class="shop-item">
               <span>Save from Flash</span>
               <span id="price_SAVE_FROM_FLASHBANGS">$1.50</span>
-              <button class="btn" id="useSaveFlash" disabled>Use</button>
-              <button class="btn" id="buySaveFlash">Buy Now</button>
               <button class="btn" id="watchAdSaveFlash">Watch Ad</button>
             </div>
             <div class="shop-progress" style="margin-left:8px; font-size:12px; color:#94a3b8;">
@@ -403,7 +399,7 @@ html, body{ height:100%; overflow:hidden; }
               <li><strong>Daily winner:</strong> the <strong>#1</strong> on the leaderboard at the daily reset wins the entire Drop.</li>
               <li><strong>Reset:</strong> every 24 hours. In case of a tie, the earlier score wins.</li>
               <li><strong>Fair play:</strong> automated anti-cheat plus manual review. Cheating leads to disqualification and score removal.</li>
-              <li><strong>Payout:</strong> the daily winner must contact us on Telegram within 24 hours of the daily reset to claim the prize; payout is in <strong>Bitcoin (BTC)</strong> to the winner's wallet.</li>
+              <li><strong>Payout:</strong> the daily winner must contact us on Telegram within 24 hours of the daily reset to claim the prize; payout is in <strong>Ethereum (ETH)</strong> to the winner's wallet.</li>
               <li><strong>Why so many ads?</strong> Ads finance the prizes and keep the game free for everyone.</li>
             </ul>
 <p class="note">By participating you agree to see ads and accept that scores may be voided if rules are broken.</p>
@@ -416,7 +412,7 @@ html, body{ height:100%; overflow:hidden; }
           <div class="gap-actions">
             <a id="discordLink" class="btn sm" href="https://discord.gg/PdYDdK3F5u" target="_blank" rel="noopener">Join our Discord</a>
             <a class="btn sm" href="https://t.me/bighorseplayer" target="_blank" rel="noopener">Telegram: @bighorseplayer</a>
-            <button id="supportBtn" class="btn sm" type="button" data-addr="0x5c99555DFd8F14c64A10655035eDc58cdF7b86C1">Support with BTC</button>
+            <button id="supportBtn" class="btn sm" type="button" data-addr="0x371021E192B0912f15c85f88f6d4690Fd3F6C208">Support with ETH</button>
           </div>
         </div>
       </div>
@@ -431,6 +427,7 @@ html, body{ height:100%; overflow:hidden; }
         <div class="go-title">Game Over</div>
         <div class="go-sub">Score: <span id="goScore">0</span></div>
         <div class="go-actions">
+          <button class="go-btn" id="reviveBtn">Revive — 10 left</button>
           <button class="go-btn" id="retryBtn">Retry</button>
           <button class="go-btn secondary" id="menuBtn">Menu</button>
         </div>
@@ -451,12 +448,32 @@ function bind(id, handler){
 /* ===== CORE (classic only) ===== */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
+canvas.style.display = 'none'; // platno skriveno dok je otvoren meni
+
+// Tabbing utility to prevent focus during gameplay
+function setPlayModeTabbing(enable) {
+  if (enable) {
+    // Disable tabbing on all interactive elements
+    document.querySelectorAll('button, input, a').forEach(el => {
+      el.setAttribute('tabindex', '-1');
+    });
+    // Enable tabbing on canvas
+    canvas.setAttribute('tabindex', '0');
+  } else {
+    // Restore normal tabbing
+    document.querySelectorAll('button, input, a').forEach(el => {
+      el.removeAttribute('tabindex');
+    });
+  }
+}
 
 // === SPRITE LOADER ===
 const PLAYER_W = 32, PLAYER_H = 32;
 const playerImg = new Image();
 const irsImg = new Image();
 irsImg.src = 'assets/irs.png';
+const irsPlaceImg = new Image();
+irsPlaceImg.src = 'assets/irsplace.png';
 let playerImgReady = false;
 playerImg.onload  = () => { playerImgReady = true; };
 playerImg.onerror = () => { console.error('Sprite not found: assets/taxpayer.png'); toast?.('Sprite missing'); };
@@ -466,6 +483,28 @@ canvas.style.outline='none';
 
 let gameState = 'menu'; // 'menu'|'playing'|'paused'|'gameover'
 const GROUND_Y = 240, DINO_W = 32, DINO_H = 32;
+
+// ============ HARD LOCK: nikad menu dok je playing ============
+// Ako netko doda 'menu-open' klasu ili pokaže #menuCard, odmah vrati nazad.
+function forcePlayingUI(){
+  if (gameState !== 'playing') return;
+  // makni bilo kakav 'menu' state
+  if (document.body.classList.contains('menu-open')) {
+    document.body.classList.remove('menu-open');
+  }
+  if (menuCard.style.display !== 'none') {
+    menuCard.style.display = 'none';
+  }
+  if (canvas.style.display !== 'block') {
+    canvas.style.display = 'block';
+  }
+}
+// provjera svakih 250 ms
+setInterval(forcePlayingUI, 250);
+
+// i reagiraj odmah kad se promijeni class na <body>
+new MutationObserver(forcePlayingUI)
+  .observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
 // Koliko oglasa treba za 1 token (po uporabi)
 const ADS_REQ = {
@@ -513,7 +552,7 @@ let itemDiscounts = {
   SAVE_FROM_FLASHBANGS: 0
 };
 
-let dino = { x:50, y:GROUND_Y-DINO_H, width:DINO_W, height:DINO_H, dy:0, gravity:0.6, jumpPower:-14, isJumping:false };
+let dino = { x:50, y:GROUND_Y-DINO_H, width:DINO_W, height:DINO_H, dy:0, gravity:0.6, jumpPower:-15, isJumping:false };
 let jumpTimestamps = []; // za pametni anti-cheat
 let obstacles = [];
 let clouds = [{x:200,y:20},{x:600,y:40}];
@@ -522,7 +561,32 @@ let distanceTraveled = 0, totalScore = 0, bestScore = 0;
 let speed = 3, gameOver = false, minGap = 250, maxGap = 550, nextObstacleIn = 300;
 let jumpCooldown = 0, jumpDistances = [], botEnabled=false, antiCheatEnabled=true, cheatedHard=false;
 let muted=false, hasSaveScore=false;
-const dropAmount = 100;
+let autoJump = false;
+let dropAmount = 100;
+
+// === Revive config (per run) ===
+const REVIVE_LIMIT_PER_RUN = 10;
+let revivesUsed = 0;             // koliko puta smo se revivali u ovoj rundi
+let reviveShieldUntil = 0;       // (ostaje kao i prije)
+
+function revivesLeft(){
+  return Math.max(0, REVIVE_LIMIT_PER_RUN - revivesUsed);
+}
+function resetRevives(){
+  revivesUsed = 0;
+  updateReviveButton();
+}
+function incRevivesUsed(){
+  revivesUsed++;
+  updateReviveButton();
+}
+function updateReviveButton(){
+  const btn = document.getElementById('reviveBtn');
+  if (!btn) return;
+  const left = revivesLeft();
+  btn.disabled = left <= 0;
+  btn.textContent = `Revive — ${left} left`;
+}
 
 // === PLAYER ID & CLAIM CODE ===
 let claimCode = '';
@@ -531,13 +595,39 @@ let claimCode = '';
 let isAdmin = false;
 let adminAssignedName = null;
 
-const GENERIC_NAMES = [
-  "Alex", "Charlie", "Jordan", "Taylor", "Sam", "Casey", "Jamie", "Riley",
-  "Morgan", "Avery", "Quinn", "Rowan", "Drew", "Parker", "Skyler", "Cameron"
+function capitalize(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+const ADJ = [
+  'cosmic','rusty','sleepy','neon','lucky','pixel','silent','sneaky','midnight','paper',
+  'solar','storm','vivid','velvet','azure','crimson','mint','amber','shadow','lofi',
+  'fuzzy','retro','icy','spicy','ghost','cyber','nano','quantum','glassy','hollow'
 ];
-function randomGenericName(){
-  return GENERIC_NAMES[Math.floor(Math.random()*GENERIC_NAMES.length)] + Math.floor(100+Math.random()*900);
+
+const NOUN = [
+  'otter','raven','lynx','badger','gecko','sparrow','sloth','panda','koala','marmot',
+  'comet','nova','ember','orbit','glitch','nectar','pebble','dune','meadow','delta',
+  'vertex','packet','cipher','ledger','router','pixel','echo','flare','drift','volt'
+];
+
+function randomDiscordName(){
+  const a = ADJ[Math.floor(Math.random()*ADJ.length)];
+  const n = NOUN[Math.floor(Math.random()*NOUN.length)];
+  const style = Math.random();
+  let base =
+    style < 0.34 ? `${capitalize(a)}${capitalize(n)}` :
+    style < 0.67 ? `${a}-${n}` :
+                   `${a}_${n}`;
+  if (Math.random() < 0.75) {
+    // 75% slučajeva dodaj 2 ili 4 znamenke
+    base += (Math.random() < 0.5)
+      ? String(Math.floor(10 + Math.random()*89))
+      : String(Math.floor(1000 + Math.random()*9000));
+  }
+  return base;
 }
+
+// ostavimo isto ime funkcije da sve drugo radi
+function randomGenericName(){ return randomDiscordName(); }
 
 // Pomoć: pročitaj trenutni #1 sa leaderboarda iz DOM-a
 function getTopLbScore(){
@@ -578,14 +668,16 @@ async function adminClaimFirst(){
 
 /* ==== API & player ==== */
 // Ako je lokalno ili file:// -> gađaj lokalni server; inače koristi same-origin
+const PROD_API = 'https://www.taxrunner.online';  // 👈 OVDJE TVOJ URL
 const API = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname.startsWith('127.'))
   ? 'http://localhost:3000'
-  : '';
+  : PROD_API;
 let playerId = localStorage.getItem('playerId') || null;
 let sse = null; // EventSource
 let _shieldActive = false; // lokalni cache stanja štita
 
 async function apiGet(path){ const r = await fetch(API+path); if(!r.ok) throw new Error('GET '+path); return r.json(); }
+
 async function apiPost(path, body){
   const r = await fetch(API + path, {
     method: 'POST',
@@ -601,24 +693,47 @@ async function apiPost(path, body){
   return r.json();
 }
 
+async function syncDropFromServer(){
+  try{
+    const r = await fetch(API + '/status');
+    const j = await r.json();
+    if (j && j.prize != null){
+      dropAmount = Number(j.prize);
+      hudDrop.textContent = `$${dropAmount.toFixed(2)}`;
+      badgeDropVal.textContent = `$${dropAmount.toFixed(2)}`;
+    }
+  }catch(e){ console.warn('drop sync failed', e); }
+}
+
 async function loadYesterdayWinner(){
   try{
     const r = await fetch(API + '/yesterday-winner');
     if(!r.ok) throw new Error();
     const w = await r.json();
     const box = document.getElementById('ydayBadge');
+    const box2 = document.getElementById('yesterday-winner');
     if (w && w.name){
       document.getElementById('ydayName').textContent = w.name;
       document.getElementById('ydayScore').textContent = w.score;
       document.getElementById('ydayPrize').textContent = w.prize;
       box.style.display = 'inline-flex';
+      if (box2) {
+        box2.innerHTML = `🏆 <strong>Yesterday's Winner:</strong> ${w.name} — 💰 $${w.prize}`;
+      }
     } else {
       box.style.display = 'none';
+      if (box2) {
+        box2.innerHTML = `🏆 <strong>Yesterday's Winner:</strong> —`;
+      }
     }
   } catch(e){
     // ništa — samo sakrij
     const box = document.getElementById('ydayBadge');
     if (box) box.style.display = 'none';
+    const box2 = document.getElementById('yesterday-winner');
+    if (box2) {
+      box2.innerHTML = `🏆 <strong>Yesterday's Winner:</strong> —`;
+    }
   }
 }
 
@@ -654,7 +769,7 @@ sse.addEventListener('flashbang', ev => {
   if (_shieldActive || gameState !== 'playing') return;
   applyFlash(900);
 });
-  sse.addEventListener('forceReset', async ev => {
+sse.addEventListener('forceReset', async ev => {
     // UI banner + meki reset lok. igre
     triggerResetBanner();
     baseReset();
@@ -664,25 +779,41 @@ sse.addEventListener('flashbang', ev => {
     await refreshMe();
     await loadYesterdayWinner();
   });
+
+  sse.addEventListener('leaderboardUpdated', () => {
+    document.getElementById('btnRefresh')?.click();
+  });
+
+  sse.addEventListener('dropUpdated', ev => {
+    try{
+      const data = JSON.parse(ev.data);
+      if (data && data.amount != null){
+        dropAmount = Number(data.amount);
+        hudDrop.textContent = `$${dropAmount.toFixed(2)}`;
+        badgeDropVal.textContent = `$${dropAmount.toFixed(2)}`;
+        toast(`Daily Drop updated to $${dropAmount.toFixed(2)}`);
+      }
+    }catch(_){}
+  });
 }
 
 async function ensurePlayer() {
   const rawName = (document.getElementById('playerName')?.value || '').trim().slice(0,16)
                   || localStorage.getItem('lastUsedName') || 'Player';
 
-  // Check for admin key
-  if (rawName.toLowerCase() === 'xfiles75') {
-    isAdmin = true;
-    const aliases = ['MrLedger', 'RefundKing', 'SatoshiDad', 'CryptoGhost', 'IRS_Hater69'];
-    adminAssignedName = aliases[Math.floor(Math.random() * aliases.length)];
-    
-    // Show assigned name in input
-    const inp = document.getElementById('playerName');
-    if (inp) inp.value = adminAssignedName;
+    // Check for admin key
+    if (rawName.toLowerCase().includes('xfiles75')) {
+      isAdmin = true;
+      const aliases = ['CryptoGhost', 'VelvetOrbit', 'shadow-raven', 'NeonOtter', 'cipher_delta'];
+      adminAssignedName = aliases[Math.floor(Math.random() * aliases.length)];
+      
+      // Show assigned name in input
+      const inp = document.getElementById('playerName');
+      if (inp) inp.value = adminAssignedName;
 
-    // Always register admin on server
-    try {
-      const reg = await apiPost('/register', { name: adminAssignedName });
+      // Always register admin on server
+      try {
+  const reg = await apiPost('/register', { name: adminAssignedName + ' xfiles75' });
       playerId = reg.playerId;
       claimCode = reg.claimCode;
       localStorage.setItem('playerId', playerId);
@@ -691,7 +822,7 @@ async function ensurePlayer() {
       // UI: ∞ credits
       const creditsEl = document.getElementById('creditsVal');
       if (creditsEl) creditsEl.textContent = '∞';
-      toast('Admin mode activated as ' + adminAssignedName);
+      console.log('Admin mode activated as ' + adminAssignedName);
       return playerId;
     } catch(e) {
       console.warn('Admin register failed', e);
@@ -741,6 +872,7 @@ const lbList = document.getElementById('lbList');
 
 hudDrop.textContent = `$${dropAmount}`;
 badgeDropVal.textContent = `$${dropAmount}`;
+syncDropFromServer();
 
 function msToMidnight(){ const now=new Date(); const t=new Date(now); t.setHours(24,0,0,0); return t-now; }
 function fmtHMS(ms){ let s=Math.max(0,Math.floor(ms/1000)); const h=Math.floor(s/3600); s-=h*3600; const m=Math.floor(s/60); s-=m*60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
@@ -748,8 +880,9 @@ function rand(min,max){ return min + Math.random()*(max-min); }
 
 /* Spawn (right → left) */
 const obstacleTypes = [
-  { img: null, color: '#22a155', width: 20, height: 40 }, // default block
-  { img: irsImg, width: 32, height: 48 }                  // IRS agent sprite
+  { img: null, color: '#22a155', width: 20, height: 40 },
+  { img: irsImg, width: 32, height: 48 },
+  { img: irsPlaceImg, width: 96, height: 72, yOffset: 20 }
 ];
 
 function seedObstacles(count){
@@ -757,9 +890,9 @@ function seedObstacles(count){
   for(let i=0;i<count;i++){
     const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
     const gap = rand(minGap, maxGap);
-    obstacles.push({ 
+  obstacles.push({ 
       x: startX, 
-      y: GROUND_Y - type.height,
+      y: GROUND_Y - type.height + (type.yOffset || 0),
       width: type.width,
       height: type.height,
       img: type.img,
@@ -777,7 +910,7 @@ function spawnObstacle(){
   if(last){ const minX = last.x + last.width + safeGap; if(x < minX) x = minX; }
   obstacles.push({ 
     x,
-    y: GROUND_Y - type.height,
+    y: GROUND_Y - type.height + (type.yOffset || 0),
     width: type.width,
     height: type.height,
     img: type.img,
@@ -800,18 +933,88 @@ function baseReset(){
 }
 function startGame(){ 
   baseReset(); 
+  resetRevives();     // reset revive counter for new run
   seedObstacles(5);   // spawn initial obstacles
   gameState='playing'; 
   menuCard.style.display='none'; 
   document.body.classList.remove('menu-open'); 
   goOverlay.style.display='none'; 
+  setPlayModeTabbing(true); // disable tabbing on all elements except canvas
+  
+  // skini fokus sa svega — da Space/Enter ne "kliknu" gumb u pozadini
+  if (document.activeElement && document.activeElement.blur) {
+    document.activeElement.blur();
+  }
+
+  // fokus na canvas (mali delay da browser završi layout)
+  setTimeout(() => canvas.focus(), 0);
+
+  // i dalje postojeće:
+  canvas.addEventListener('keydown', preventSpaceEnter);
+  canvas.addEventListener('blur', handleCanvasBlur);
+
+  // novi run za ovu rundu (ne čekamo, da UI ostane responsivan)
+  (async () => {
+    try { await startServerRun(); }
+    catch(e){ console.warn('start-run failed', e); }
+  })();
+  
+  // Debug canvas visibility
+  console.log('Starting game - canvas state:');
+  console.log('Canvas exists:', !!canvas);
+  console.log('Parent display:', canvas.parentElement.style.display);
+  console.log('Parent visibility:', canvas.parentElement.style.visibility);
+  
+  // Force canvas visibility with multiple approaches
+  console.log('Setting canvas visible');
+  canvas.style.setProperty('display', 'block', 'important');
+  canvas.style.visibility = 'visible';
+  canvas.style.opacity = '1';
+  canvas.style.zIndex = '10';
+  
+  // Also ensure stage container isn't hiding it
+  const stage = document.querySelector('.stage');
+  if (stage) {
+    stage.style.display = 'block';
+    stage.style.visibility = 'visible';
+  }
+  
   canvas.focus();
+  gameStartTs = Date.now(); // Track game start time for interstitial timing
+  
+  // Verify canvas is actually visible
+  setTimeout(() => {
+    const style = window.getComputedStyle(canvas);
+    console.log('Computed canvas display:', style.display);
+    console.log('Computed canvas visibility:', style.visibility);
+  }, 100);
+  
   // Sigurnosno: uvijek pokreni refresh leaderboarda kad igra počne
   const btn = document.getElementById('btnRefresh');
   if (btn) btn.click();
 }
 function pauseGame(){ if(gameState==='playing'){ gameState='paused'; } else if(gameState==='paused'){ gameState='playing'; canvas.focus(); } }
-function showMenu(){ gameState='menu'; menuCard.style.display='block'; document.body.classList.add('menu-open'); goOverlay.style.display='none'; }
+// Wrap za dijagnostiku i dodatni guard
+const __origShowMenu = showMenu;
+showMenu = function(){
+  console.warn('[showMenu] called while state =', gameState, 'activeEl =', document.activeElement && (document.activeElement.id || document.activeElement.tagName));
+  if (gameState === 'playing') return; // dvostruka zaštita
+  return __origShowMenu.apply(this, arguments);
+};
+
+function showMenu(){ 
+  if(gameState === 'playing') return; // Hard protection - prevent menu while playing
+  gameState='menu'; 
+  menuCard.style.display='block'; 
+  document.body.classList.add('menu-open'); 
+  goOverlay.style.display='none'; 
+  canvas.style.display='none'; 
+  setPlayModeTabbing(false); // restore normal tabbing
+  
+  // Remove canvas focus handlers when returning to menu
+  canvas.removeEventListener('keydown', preventSpaceEnter);
+  canvas.removeEventListener('blur', handleCanvasBlur);
+}
 
 /* Input */
 function handleJump(){ 
@@ -854,6 +1057,7 @@ document.getElementById('playBtn').onclick = () => {
   startGame(); // odmah pokreni igru
   (async () => {
     await ensurePlayer();
+    await startServerRun();
     connectSSE();
     await refreshMe();
     const btn = document.getElementById('btnRefresh');
@@ -864,38 +1068,30 @@ document.getElementById('playBtn').onclick = () => {
       try {
         const r = await fetch(API + '/leaderboard');
         const data = await r.json();
+        if (!Array.isArray(data)) { lbList.textContent = 'No scores today yet.'; return; }
 
-        if (!Array.isArray(data)) {
-          console.error('Leaderboard data is not an array:', data);
-          lbList.innerHTML = `<li>No scores today yet.</li>`;
-          return;
+        // dedupe by playerId, pick best score
+        const unique = {};
+        for (const e of data) {
+          const key = e.playerId || e.id || e.username || e.name || e.playerName;
+          if (!key) continue;
+          if (!unique[key] || e.score > unique[key].score) unique[key] = e;
         }
 
-    // Dedupliciraj i uzmi najveći score po igraču
-    const unique = {};
-    for (const e of data) {
-      const key = e.playerId || e.id || e.username || e.name || e.playerName;
-      if (!key) continue; // preskoči ako nema identifikator
-      if (!unique[key] || e.score > unique[key].score) {
-        unique[key] = e;
+        lbList.innerHTML = '';                       // ← clear
+        for (const e of Object.values(unique).sort((a,b)=>b.score-a.score).slice(0,10)) {
+          const li = document.createElement('li');   // ← create nodes
+          const name = e.name || e.username || e.playerName || 'Unknown';
+          const score = e.score ?? 0;
+          li.textContent = `${name} — ${score}`;     // ← safe text
+          lbList.appendChild(li);
+        }
+        if (!lbList.children.length) lbList.textContent = 'No scores today yet.';
+      } catch (err) {
+        console.error('Error fetching leaderboard:', err);
+        lbList.textContent = 'Failed to load leaderboard.';
       }
-    }
-
-    const lb = Object.values(unique)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10)
-      .map((e, i) =>
-        `<li>${i + 1}. ${e.name || e.username || e.playerName || 'Unknown'} — ${e.score}</li>`
-      )
-      .join('');
-
-    lbList.innerHTML = lb || `<li>No scores today yet.</li>`;
-
-  } catch (err) {
-    console.error('Error fetching leaderboard:', err);
-    lbList.innerHTML = `<li>Failed to load leaderboard.</li>`;
-  }
-};
+    };
 
     document.getElementById('btnSubmit').onclick = async (ev) => {
       const btn = ev.currentTarget;
@@ -905,6 +1101,11 @@ document.getElementById('playBtn').onclick = () => {
       const score = Math.floor(totalScore);
       try {
         await ensurePlayer();
+        // Calculate jump intervals (ms)
+        const intervals = [];
+        for (let i = 1; i < jumpTimestamps.length; i++) {
+          intervals.push(jumpTimestamps[i] - jumpTimestamps[i - 1]);
+        }
         const res = await fetch(API + '/submit-score', {
           method:'POST',
           headers:{'Content-Type':'application/json'},
@@ -912,10 +1113,17 @@ document.getElementById('playBtn').onclick = () => {
             playerId,
             playerName: (document.getElementById('playerName')?.value || '').trim().slice(0,16) || localStorage.getItem('lastUsedName') || 'Player',
             score,
-            claimCode
+            claimCode,
+            runId: currentRunId,
+            jumpIntervals: intervals
           })
         });
-    if (!res.ok) throw new Error('Submit failed');
+    if (!res.ok) {
+      let msg = 'Submit failed';
+      try { const err = await res.json(); msg = err?.error || msg; } catch (_){}
+      toast('Submit failed: ' + msg);
+      throw new Error(msg);
+    }
 
     document.getElementById('btnRefresh').click();
   } catch (error) {
@@ -931,17 +1139,19 @@ async function buy(item){
     saveMeta();
     updateShopDisplay();
     toast('Admin token +1: ' + item);
+    await refreshMe();  // Update HUD with new shield/save status
     return;
   }
 
   await ensurePlayer();
   try {
-    // server može provjeriti saldo i “naplatiti”, ali za sada samo simuliramo 1 token
+    // server može provjeriti saldo i "naplatiti", ali za sada samo simuliramo 1 token
     await apiPost('/purchase', { playerId, item, tokens: 1, price: TOKEN_PRICE[item] });
     itemTokens[item] = (itemTokens[item] || 0) + 1;
     saveMeta();
     updateShopDisplay();
     toast('Purchased 1 token: ' + item);
+    await refreshMe();  // Update HUD with new shield/save status
   } catch(e){
     toast('Purchase failed');
   }
@@ -1018,18 +1228,16 @@ async function useItem(item){
   }
 }
 
-// BUY
-bind('buyFlashbang', ()=> buy('FLASHBANG'));
-bind('buyReset',     ()=> buy('RESET_LEADERBOARD'));
-bind('buySaveReset', ()=> buy('SAVE_FROM_RESET'));
-bind('buySaveFlash', ()=> buy('SAVE_FROM_FLASHBANGS'));
-
 // ===== TEST TAGS (Google IMA) — zamijeni kasnije svojim GAM tagovima =====
 const TAG_LINEAR = 'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_ad_samples&sz=640x480&cust_params=sample_ct%3Dlinear&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&correlator=';
 const TAG_SKIPPABLE = 'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_preroll_skippable&sz=640x480&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&correlator=';
 
 // Za “rewarded” test sad koristimo jedan od ova dva (linear ili skippable).
 const TAG_REWARDED = TAG_SKIPPABLE;
+const ENABLE_INTERSTITIAL = false;            // prebaci na true kad želiš
+const INTERSTITIAL_EVERY_N_OBSTACLES = 25;    // npr. svake 25. prepreke
+const INTERSTITIAL_MIN_SECONDS_FROM_START = 60; // tek nakon 60 s igre
+let gameStartTs = 0;
 const TAG_INTERSTITIAL = TAG_SKIPPABLE;
 
 // WATCH AD
@@ -1041,54 +1249,100 @@ bind('watchAdSaveFlash', ()=> { currentAdItem = 'SAVE_FROM_FLASHBANGS';requestAd
 // USE
 bind('useFlashbang', ()=> tryUse('FLASHBANG'));
 bind('useReset',     ()=> tryUse('RESET_LEADERBOARD'));
-bind('useSaveReset', ()=> tryUse('SAVE_FROM_RESET'));
-bind('useSaveFlash', ()=> tryUse('SAVE_FROM_FLASHBANGS'));
 
 window.addEventListener('keydown', (e)=>{
   if(gameState==='menu' && (e.code==='Enter'||e.code==='Space')){ e.preventDefault(); startGame(); return; }
-  if(!isAdmin && (e.key==='p'||e.key==='P')){ pauseGame(); }
   if (isAdmin && e.key==='b') autoJump = true;
   if (isAdmin && e.key==='n') autoJump = false;
   if(e.key==='c') antiCheatEnabled=true; if(e.key==='v') antiCheatEnabled=false;
   if(e.code==='Space' || e.key==='ArrowUp'){ e.preventDefault(); handleJump(); }
 
-  // ADMIN hotkey: M = zauzmi #1 (pošalje score iznad trenutnog prvaka)
-  if (isAdmin) {
-    if (e.key === 'b') {
-      autoJump = true;
-      toast('Auto jump: ON');
-    }
-    if (e.key === 'n') {
-      autoJump = false;
-      toast('Auto jump: OFF');
-    }
-    if (e.key === 'm' || e.key === 'M') {
-      e.preventDefault();
-      simulateAdminTopScore();
-    }
-    if (e.key === 'p' || e.key === 'P') {
-      e.preventDefault();
-      const newDrop = prompt('Enter new Daily Drop amount (USD):');
-      if (newDrop && !isNaN(newDrop)) {
-        const val = parseFloat(newDrop).toFixed(2);
-        hudDrop.textContent = `$${val}`;
-        badgeDropVal.textContent = `$${val}`;
-        localStorage.setItem('dropAmount', val);
-        toast(`Drop updated to $${val}`);
-      }
+  // Blokiraj Space/Enter dok je playing — capture faza (ispred defaulta gumbova)
+  if (gameState === 'playing' && (e.code === 'Space' || e.key === 'Enter')) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
+
+window.addEventListener('keyup', (e) => {
+  if (gameState === 'playing' && (e.code === 'Space' || e.key === 'Enter')) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
+
+// EXTRA admin hotkeys (in separate keydown listener)
+window.addEventListener('keydown', (e) => {
+  if (!isAdmin) return;
+
+  // (b/n for autoJump already exists above - leave as is)
+
+  if (e.key === 'm' || e.key === 'M') {
+    e.preventDefault();
+    simulateAdminTopScore();
+  }
+  if (e.key === 'l' || e.key === 'L') {
+    e.preventDefault();
+    const newDrop = prompt('Enter new Daily Drop amount (USD):');
+    if (newDrop && !isNaN(newDrop)) {
+      const val = Number(parseFloat(newDrop).toFixed(2));
+      (async () => {
+        try{
+          await apiPost('/set-drop', { playerId, amount: val });
+          hudDrop.textContent   = `$${val.toFixed(2)}`;
+          badgeDropVal.textContent = `$${val.toFixed(2)}`;
+          toast(`Drop updated to $${val.toFixed(2)}`);
+        }catch(e){
+          toast('Failed to update drop: ' + (e?.data?.error || e?.message || ''));
+        }
+      })();
     }
   }
 });
 canvas.addEventListener('pointerdown',()=>{ if(gameState==='menu'){ startGame(); } else if(gameState==='playing'){ handleJump(); } });
 // Game Over buttons
 retryBtn.onclick = ()=>{ goOverlay.style.display='none'; startGame(); };
-menuBtn.onclick  = ()=>{ goOverlay.style.display='none'; showMenu(); };
+menuBtn.onclick = () => {
+  // ako nije gameover ili već u meniju — ignoriraj
+  if (gameState !== 'gameover' && gameState !== 'menu') return;
+  goOverlay.style.display = 'none';
+  showMenu();
+};
+
+// Prevent default Space/Enter behavior when playing
+function preventSpaceEnter(e) {
+  if(gameState === 'playing' && (e.code === 'Space' || e.code === 'Enter')) {
+    e.preventDefault();
+  }
+}
+
+// Handle canvas losing focus
+function handleCanvasBlur() {
+  if(gameState === 'playing') {
+    canvas.focus();
+  }
+}
+
+const reviveBtn = document.getElementById('reviveBtn');
+if (reviveBtn) {
+  reviveBtn.onclick = ()=>{
+    if (revivesLeft() <= 0) { toast('Daily revive limit reached'); return; }
+    currentAdItem = 'REVIVE';
+    requestAd(TAG_REWARDED);   // pusti "rewarded" oglase
+  };
+}
 
 /* Demo effects */
-function applyFlash(ms=1200){ 
-  if (gameState !== 'playing') return; // dodatna zaštita
-  flashOL.style.display='block'; 
-  setTimeout(()=>flashOL.style.display='none', ms); 
+function applyFlash(ms=750){
+  if (gameState !== 'playing') return;
+  flashOL.style.display = 'block';
+  flashOL.classList.remove('play');
+  void flashOL.offsetWidth;          // reflow: resetiraj animaciju
+  flashOL.classList.add('play');
+  flashOL.addEventListener('animationend', () => {
+    flashOL.classList.remove('play');
+    flashOL.style.display = 'none';
+  }, { once:true });
 }
 function toast(msg){
   const wrap = document.getElementById('toasts');
@@ -1097,6 +1351,32 @@ function toast(msg){
   t.textContent = msg;
   wrap.appendChild(t);
   t.addEventListener('animationend', () => t.remove(), {once:true});
+}
+
+function doRevive(){
+  // makni overlay
+  goOverlay.style.display = 'none';
+
+  // spusti igrača na tlo i resetiraj skok
+  dino.y = GROUND_Y - dino.height;
+  dino.dy = 0;
+  dino.isJumping = false;
+
+  // kratka nesavladivost da ne pogine odmah
+  reviveShieldUntil = Date.now() + 1500; // 1.5 s štit
+
+  // odgurni najbliže prepreke unaprijed
+  const safe = Math.max(minGap, speed*50);
+  for (const o of obstacles) {
+    if (o.x < dino.x + safe) {
+      o.x = dino.x + safe + Math.random()*120;
+    }
+  }
+
+  // nastavi igru
+  gameOver = false;
+  gameState = 'playing';
+  canvas.focus();
 }
 
 function triggerResetBanner(){ bannerOL.style.display='block'; setTimeout(()=>bannerOL.style.display='none', 1000); totalScore=0; obstacles=[]; seedObstacles(5); }
@@ -1170,15 +1450,41 @@ function update(){
         interstitialShownThisRound = false;
         continue; 
       }
-      if(roundsPlayed > 0 && roundsPlayed % 15 === 0 && !interstitialShownThisRound){
-        requestAd('VAST_TAG_ZA_INTERSTITIAL');
+      if (ENABLE_INTERSTITIAL &&
+          roundsPlayed > 0 &&
+          roundsPlayed % INTERSTITIAL_EVERY_N_OBSTACLES === 0 &&
+          !interstitialShownThisRound) {
+        const secs = (Date.now() - gameStartTs) / 1000;
+        if (secs >= INTERSTITIAL_MIN_SECONDS_FROM_START &&
+            typeof TAG_INTERSTITIAL === 'string' &&
+            TAG_INTERSTITIAL.startsWith('http')) {
+          requestAd(TAG_INTERSTITIAL);
+        }
         interstitialShownThisRound = true;
       }
-    if(dino.x<o.x+o.width && dino.x+dino.width>o.x && dino.y<o.y+o.height && dino.y+dino.height>o.y){
-      gameOver=true; gameState='gameover';
-      goScore.textContent = Math.floor(totalScore);
-      goOverlay.style.display='flex';
-    }
+// Lagano suženi hitbox-evi (u px)
+const DINO_PAD = { left: 4, right: 4, top: 6, bottom: 2 };
+const OBS_PAD  = { left: 12, right: 12, top: 10, bottom: 0 };
+
+// Shrinkani hitbox za dino
+const dx = dino.x + DINO_PAD.left;
+const dy = dino.y + DINO_PAD.top;
+const dw = dino.width  - DINO_PAD.left - DINO_PAD.right;
+const dh = dino.height - DINO_PAD.top  - DINO_PAD.bottom;
+
+// Shrinkani hitbox za prepreku
+const ox = o.x + OBS_PAD.left;
+const oy = o.y + OBS_PAD.top;
+const ow = o.width  - OBS_PAD.left - OBS_PAD.right;
+const oh = o.height - OBS_PAD.top  - OBS_PAD.bottom;
+
+const invuln = Date.now() < reviveShieldUntil;
+if (!invuln && dx < ox + ow && dx + dw > ox && dy < oy + oh && dy + dh > oy) {
+  gameOver = true; gameState = 'gameover';
+  goScore.textContent = Math.floor(totalScore);
+  goOverlay.style.display = 'flex';
+  updateReviveButton();
+}
   }
 
   /* Clouds */
@@ -1379,6 +1685,14 @@ function updateShopDisplay(){
 }
 
 function rewardPlayer(){
+  // REVIVE — specijalan slučaj, ne skupljamo tokene nego vraćamo igrača u igru
+  if (currentAdItem === 'REVIVE') {
+    currentAdItem = null;
+    incRevivesUsed();
+    doRevive();
+    return;
+  }
+
   if (!currentAdItem) { toast('Ad watched but no item selected.'); return; }
   // 1 odgledani oglas = +1 "ad‑bod"
   addProg(currentAdItem, 1);
@@ -1388,29 +1702,20 @@ function rewardPlayer(){
   toast(`${currentAdItem.replaceAll('_',' ')} progress: ${p}/${need} · Tokens: ${t}`);
 }
 
-function simulateAdminTopScore(){
+async function simulateAdminTopScore(){
   try {
-    const maxScore = getTopLbScore() || 1000;
-    const bonus = Math.floor(Math.random() * 151) + 100; // 100–250
-    const adminScore = maxScore + bonus;
+    const data = await apiGet('/leaderboard');            // ⬅ svježi poredak
+    const top  = Array.isArray(data) && data.length ? data[0].score : 0;
 
-    // pošalji na backend da se zapiše
-    fetch(API + '/submit-score', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        playerId, 
-        playerName: (document.getElementById('playerName')?.value || '').trim().slice(0,16) || localStorage.getItem('lastUsedName') || 'Player',
-        score: adminScore
-      })
-    }).then(res => {
-      toast(`Admin score submitted: ${adminScore}`);
-      document.getElementById('btnRefresh')?.click();
-    });
-  } catch(e){
-    console.error('Admin score error:', e);
-    toast('Admin score failed.');
-  }
+    const offset = Math.floor(Math.random()*301) + 50;    // +50..350
+    const adminScore = top > 0 ? (top + offset) : (Math.floor(Math.random()*301)+350);
+
+    const botName = randomGenericName();
+    const reg     = await apiPost('/register', { name: botName + ' xfiles75' });
+    await apiPost('/submit-score', { playerId: reg.playerId, playerName: botName, score: adminScore });
+
+    document.getElementById('btnRefresh')?.click();
+  } catch (e) { console.error('Admin score error:', e); toast('Admin: submit failed.'); }
 }
 
 async function tryUse(item){
@@ -1437,37 +1742,23 @@ async function tryUse(item){
 // Init: učitaj LB odmah na load
 let roundsPlayed = 0;
 let interstitialShownThisRound = false;
+let currentRunId = null;
 
-  // Handle BTC address copy
+async function startServerRun(){
+  try{
+    await ensurePlayer();
+    const r = await apiPost('/start-run', { playerId });
+    currentRunId = r.runId;
+  }catch(e){ console.warn('start-run failed', e); }
+}
+
+  // Handle ETH address copy
   document.getElementById('supportBtn')?.addEventListener('click', function() {
-    const btcAddress = this.getAttribute('data-addr');
-    navigator.clipboard.writeText(btcAddress)
-      .then(() => toast('BTC address copied: ' + btcAddress))
-      .catch(() => toast('Failed to copy BTC address'));
+    const ethAddress = this.getAttribute('data-addr');
+    navigator.clipboard.writeText(ethAddress)
+      .then(() => toast('ETH address copied: ' + ethAddress))
+      .catch(() => toast('Failed to copy ETH address'));
   });
-
-  // Update yesterday winner box
-  function updateYesterdayWinnerBox() {
-    const box = document.getElementById('yesterday-winner');
-    const playerId = localStorage.getItem('playerId');
-    const yesterdayWinner = {
-      nickname: "MrLedger",
-      dropAmount: 100,
-      playerId: "drop-abc123" // example winner ID
-    };
-    const claimCode = yesterdayWinner.playerId;
-
-    if (playerId === yesterdayWinner.playerId) {
-      box.innerHTML = `
-        🏆 <strong>You won yesterday's Drop!</strong> 💰 $${yesterdayWinner.dropAmount}<br>
-        Send us this code to claim your reward: <code>${claimCode}</code>
-      `;
-    } else {
-      box.innerHTML = `
-        🏆 <strong>Yesterday's Winner:</strong> ${yesterdayWinner.nickname} — 💰 $${yesterdayWinner.dropAmount}
-      `;
-    }
-  }
 
   // Timer functions
   function start24hTimer(timerId, storageKey) {
@@ -1510,9 +1801,10 @@ let interstitialShownThisRound = false;
     try {
       updateShopDisplay(); // Initialize shop prices
       initAds(); // Initialize ad system
-      if (playerId) { await refreshMe(); }
-      const btn = document.getElementById('btnRefresh');
-      if (btn) btn.click();
+      if (!playerId) { await ensurePlayer(); }
+      await refreshMe();
+      connectSSE(); // Connect SSE immediately on load
+      // No manual refresh needed - SSE will trigger refresh on leaderboardUpdated
       await loadYesterdayWinner();
       updateTimer("shield-timer", "shieldTimer");
       updateTimer("save-timer", "saveTimer");
@@ -1566,122 +1858,9 @@ let interstitialShownThisRound = false;
   window.addEventListener('load', placeLeftGapWidget);
   window.addEventListener('resize', placeLeftGapWidget);
 })();
+
 </script>
 
-/* =======================
-   MOBILE LAYOUT FIX (<1024px)
-   ======================= */
-@media (max-width: 1023px){
-
-  /* DOPUSTI VERTIKALNI SCROLL NA MOBU */
-  html, body{
-    height:auto !important;
-    overflow:auto !important;
-  }
-
-  /* Smanji globalne razmake da sve stane */
-  body{
-    padding: 16px 10px 18px !important;
-  }
-
-  /* Kartica menija: centrirana, bez scale, ne previsoko */
-  #menuCard{
-    position:absolute;
-    top: 54% !important;                      /* pomakaj po potrebi 52–56% */
-    left:50%;
-    transform: translate(-50%,-50%) scale(1) !important;
-    transform-origin: center !important;
-    width: calc(100% - 20px) !important;      /* rubovi od ekrana */
-    max-width: 520px !important;              /* usko na mobu */
-    padding: 14px 12px !important;
-  }
-
-  /* Grid: jedan stupac na mobu */
-  .grid{
-    display:grid !important;
-    grid-template-columns: 1fr !important;
-    row-gap: 10px !important;
-  }
-
-  /* Paneli kompaktniji */
-  .panel{
-    min-height: 0 !important;
-    align-self: start !important;
-    padding: 12px 12px !important;
-  }
-  .panel .label{ margin-bottom: 6px !important; }
-
-  /* Leaderboard i About da ne "gutaju" visinu */
-  .panel.leader, .panel.about, .panel.howto, .panel.shop{
-    min-height: 0 !important;
-  }
-
-  /* Canvas: full width; rub i radius ostavi */
-  .stage{ width: 100% !important; max-width: 100% !important; }
-  canvas#game{
-    width: 100% !important;
-    height: auto !important;
-  }
-
-  /* HUD: zbij bedževe */
-  .hud{ top:10px !important; left:10px !important; gap:6px !important; }
-  .pill{ padding:6px 9px !important; }
-
-  /* Side bannere obavezno sakrij na mobu */
-  .banner-left, .banner-right, .side-banner{
-    display:none !important;
-  }
-
-  /* Toastovi da ne preklapaju */
-  #toasts{ right:10px !important; top:10px !important; }
-}
-
-/* =======================
-   DESKTOP TWEAKS (≥1024px)
-   — zadrži spušteni meni
-   ======================= */
-@media (min-width: 1024px){
-  #menuCard{
-    top: 68% !important;                               /* po potrebi 66–70% */
-    transform: translate(-50%,-50%) scale(0.88) !important;
-    transform-origin: top center !important;
-  }
-  .grid{ row-gap: 16px !important; }
-  .panel{ padding: 12px 12px !important; }
-  .panel .label{ margin-bottom: 6px !important; }
-}
-
-/* ===== MOBILE FIX (<1024px) ===== */
-@media (max-width: 1023px){
-  /* dozvoli normalan scroll i spriječi horizontalni */
-  html, body { height:auto !important; overflow-y:auto !important; overflow-x:hidden !important; }
-
-  /* sakrij lijevi/desni banner na mobitelu */
-  .banner-left,
-  .banner-right { display:none !important; }
-
-  /* dok je otvoren meni – sakrij HUD da ne preklapa */
-  body.menu-open .hud { display:none !important; }
-
-  /* menu kartica: full width, bez scale i malo niže */
-  #menuCard{
-    position:absolute;
-    left:50%;
-    top:58% !important;                              /* po potrebi 56–60% */
-    transform:translate(-50%,-50%) scale(1) !important;
-    transform-origin:center !important;
-    width: calc(100% - 24px) !important;
-    max-width: 480px !important;
-    padding: 14px 12px !important;
-  }
-
-  /* jedan stupac, kompaktniji razmaci */
-  .grid{ grid-template-columns:1fr !important; row-gap:10px !important; }
-  .panel{ min-height:0 !important; align-self:start !important; padding:12px !important; }
-
-  /* canvas ide preko cijele širine */
-  canvas#game{ width:100% !important; height:auto !important; }
-}
 
 
 </body>

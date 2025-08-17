@@ -19,23 +19,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.enable('trust proxy'); // bitno na Renderu
+app.set('trust proxy', 1); // VAŽNO na Renderu
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const ADMIN_KEY = process.env.ADMIN_KEY || 'dev-key';
-
 const port = process.env.PORT || 3000;
 
-// HTTPS + Canonical domain redirect
+// HTTPS + kanonski host
 app.use((req, res, next) => {
-  const host = req.hostname;
-  const isHttps = req.secure;
-  // Skip redirect if already on www subdomain or health check
-  if (host === 'www.taxrunner.online' || req.path === '/health') {
-    return next();
+  const host = req.headers.host;
+  const wantHost = 'taxrunner.online';
+  if (!req.secure) {
+    return res.redirect(301, 'https://' + host + req.originalUrl);
   }
-  if (!isHttps || host === 'taxrunner.online') {
-    return res.redirect(301, `https://www.taxrunner.online${req.originalUrl}`);
+  if (host !== wantHost) {
+    return res.redirect(301, 'https://' + wantHost + req.originalUrl);
   }
   next();
 });
@@ -66,7 +63,7 @@ app.get('/claim-grants', (req, res) => {
 // --- TEK SAD JSON ZA OSTALE RUTE ---
 app.use(express.json());
 
-// Serve static frontend from ../public (jer je index.js u /server)
+// Serve static frontend from ../public with .html extension support
 app.use(express.static(path.join(__dirname, '..', 'public'), {
   maxAge: '30d',
   etag: true,
@@ -74,12 +71,20 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
   extensions: ['html']
 }));
 
+// /play as main game route
+app.get('/play', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
+
+// Redirect root to /play
+app.get('/', (req, res) => res.redirect(302, '/play'));
+
 // robots.txt
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain').send(
 `User-agent: *
 Allow: /
-Sitemap: https://www.taxrunner.online/sitemap.xml`
+Sitemap: https://taxrunner.online/sitemap.xml`
   );
 });
 
@@ -95,7 +100,7 @@ app.get('/sitemap.xml', (req, res) => {
   ];
   const body = `<?xml version="1.0" encoding="UTF-8"?>
   <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  ${urls.map(u => `<url><loc>https://www.taxrunner.online${u}</loc></url>`).join('')}
+  ${urls.map(u => `<url><loc>https://taxrunner.online${u}</loc></url>`).join('')}
   </urlset>`;
   res.type('application/xml').send(body);
 });

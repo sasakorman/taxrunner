@@ -668,7 +668,7 @@ async function adminClaimFirst(){
 
 /* ==== API & player ==== */
 // Ako je lokalno ili file:// -> gađaj lokalni server; inače koristi same-origin
-const PROD_API = 'https://www.taxrunner.online';  // 👈 OVDJE TVOJ URL
+const PROD_API = 'https://taxrunner.online';  // 👈 OVDJE TVOJ URL
 const API = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname.startsWith('127.'))
   ? 'http://localhost:3000'
   : PROD_API;

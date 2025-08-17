@@ -1057,7 +1057,6 @@ document.getElementById('playBtn').onclick = () => {
   startGame(); // odmah pokreni igru
   (async () => {
     await ensurePlayer();
-    await startServerRun();
     connectSSE();
     await refreshMe();
     const btn = document.getElementById('btnRefresh');
@@ -1093,13 +1092,21 @@ document.getElementById('playBtn').onclick = () => {
       }
     };
 
-    document.getElementById('btnSubmit').onclick = async (ev) => {
-      const btn = ev.currentTarget;
-      if (btn.disabled) return;
-      btn.disabled = true;
+document.getElementById('btnSubmit').onclick = async (ev) => {
+  const btn = ev.currentTarget;
+  if (btn.disabled) return;
+  btn.disabled = true;
 
-      const score = Math.floor(totalScore);
-      try {
+  const score = Math.floor(totalScore);
+  const elapsed = (Date.now() - gameStartTs) / 1000;       // kad si startao igru
+  const minSec  = Math.max(score / 6, 8);
+  if (elapsed + 2 < minSec) {
+    toast(`Play a bit longer before submitting (need ~${Math.ceil(minSec)}s, you played ${Math.floor(elapsed)}s)`);
+    btn.disabled = false;
+    return;
+  }
+
+  try {
         await ensurePlayer();
         // Calculate jump intervals (ms)
         const intervals = [];

@@ -390,9 +390,10 @@ app.post('/submit-score', (req, res) => {
       return res.status(400).json({ error: 'No active run' });
 
     const elapsedSec = (Date.now() - run.startedAt) / 1000;
-    const minSec = Math.max(score / 6, 10); // nemoguće brže od 6 bod/s
-    if (elapsedSec < minSec) {
-      return res.status(400).json({ error: 'Too fast' });
+    // lakši prag + 2s grace da ne pukne zbog sitnih odgoda
+    const minSec = Math.max(score / 6, 8);     // prije 10
+    if (elapsedSec + 2 < minSec) {
+      return res.status(400).json({ error: 'Too fast', need: Math.ceil(minSec), elapsed: Math.floor(elapsedSec) });
     }
 
     if (Array.isArray(jumpIntervals) && jumpIntervals.length >= 10) {

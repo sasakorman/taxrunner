@@ -24,15 +24,11 @@ app.set('trust proxy', 1); // VAŽNO na Renderu
 const ADMIN_KEY = process.env.ADMIN_KEY || 'dev-key';
 const port = process.env.PORT || 3000;
 
-// HTTPS + kanonski host
+// HTTPS only — dopusti i apex i www
 app.use((req, res, next) => {
-  const host = req.headers.host;
-  const wantHost = 'taxrunner.online';
+  const host = (req.headers.host || '').toLowerCase();
   if (!req.secure) {
     return res.redirect(301, 'https://' + host + req.originalUrl);
-  }
-  if (host !== wantHost) {
-    return res.redirect(301, 'https://' + wantHost + req.originalUrl);
   }
   next();
 });
@@ -75,9 +71,6 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
 app.get('/play', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
-
-// Redirect root to /play
-app.get('/', (req, res) => res.redirect(302, '/play'));
 
 // robots.txt
 app.get('/robots.txt', (req, res) => {
@@ -136,13 +129,21 @@ let currentDay = dayKey();
 const players = {};
 
 function saveState() {
-  fs.writeFileSync('players.json', JSON.stringify(players, null, 2));
+  const state = {
+    players,
+    moneyDropAmount: MONEY_DROP_AMOUNT
+  };
+  fs.writeFileSync('players.json', JSON.stringify(state, null, 2));
 }
 
 function loadState() {
   if (fs.existsSync('players.json')) {
     const data = fs.readFileSync('players.json', 'utf8');
-    Object.assign(players, JSON.parse(data));
+    const state = JSON.parse(data);
+    Object.assign(players, state.players);
+    if (state.moneyDropAmount) {
+      MONEY_DROP_AMOUNT = state.moneyDropAmount;
+    }
   }
 }
 
@@ -430,6 +431,22 @@ app.get('/leaderboard', (req, res) => {
     .sort((a, b) => b.score - a.score)
     .slice(0, 100);
   res.json(lb);
+});
+
+/** ===== Token redemption ===== */
+app.post('/redeem', (req, res) => {
+  const { playerId, token } = req.body || {};
+  if (!players[playerId]) return res.status(400).json({ error: 'Invalid player' });
+  if (!token || typeof token !== 'string') return res.status(400).json({ error: 'Invalid token' });
+
+  // Track tokens per player
+  if (!players[playerId].tokens) players[playerId].tokens = [];
+  players[playerId].tokens.push(token);
+
+  // Persist MONEY_DROP_AMOUNT
+  saveState();
+
+  res.json({ ok: true, tokens: players[playerId].tokens });
 });
 
 /** ===== Purchases ===== */

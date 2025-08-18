@@ -348,39 +348,53 @@ html, body{ height:100%; overflow:hidden; }
             <div class="shop-item">
               <span>Flashbang</span>
               <span id="price_FLASHBANG">$2.00</span>
-              <button class="btn" id="useFlashbang" disabled>Use</button>
+              <div class="token-controls">
+                <button class="btn" id="useFlashbang" disabled>Use</button>
+                <span class="token-count" id="tok_FLASHBANG">0</span>
+              </div>
               <button class="btn" id="watchAdFlash">Watch Ad</button>
             </div>
             <div class="shop-progress" style="margin-left:8px; font-size:12px; color:#94a3b8;">
-              Progress: <b id="prog_FLASHBANG">0/5</b> · Tokens: <b id="tok_FLASHBANG">0</b>
+              Progress: <b id="prog_FLASHBANG">0/5</b> · Player Tokens: <b id="player_tok_FLASHBANG">0</b>
             </div>
 
             <div class="shop-item">
               <span>Reset Leaderboard</span>
               <span id="price_RESET_LEADERBOARD">$20.00</span>
-              <button class="btn" id="useReset" disabled>Use</button>
+              <div class="token-controls">
+                <button class="btn" id="useReset" disabled>Use</button>
+                <span class="token-count" id="tok_RESET_LEADERBOARD">0</span>
+              </div>
               <button class="btn" id="watchAdReset">Watch Ad</button>
             </div>
             <div class="shop-progress" style="margin-left:8px; font-size:12px; color:#94a3b8;">
-              Progress: <b id="prog_RESET_LEADERBOARD">0/50</b> · Tokens: <b id="tok_RESET_LEADERBOARD">0</b>
+              Progress: <b id="prog_RESET_LEADERBOARD">0/50</b> · Player Tokens: <b id="player_tok_RESET_LEADERBOARD">0</b>
             </div>
 
             <div class="shop-item">
               <span>Save from Reset</span>
               <span id="price_SAVE_FROM_RESET">$10.00</span>
+              <div class="token-controls">
+                <button class="btn" id="useSaveReset" disabled>Use</button>
+                <span class="token-count" id="tok_SAVE_FROM_RESET">0</span>
+              </div>
               <button class="btn" id="watchAdSaveReset">Watch Ad</button>
             </div>
             <div class="shop-progress" style="margin-left:8px; font-size:12px; color:#94a3b8;">
-              Progress: <b id="prog_SAVE_FROM_RESET">0/30</b> · Tokens: <b id="tok_SAVE_FROM_RESET">0</b>
+              Progress: <b id="prog_SAVE_FROM_RESET">0/30</b> · Player Tokens: <b id="player_tok_SAVE_FROM_RESET">0</b>
             </div>
 
             <div class="shop-item">
               <span>Save from Flash</span>
               <span id="price_SAVE_FROM_FLASHBANGS">$1.50</span>
+              <div class="token-controls">
+                <button class="btn" id="useSaveFlash" disabled>Use</button>
+                <span class="token-count" id="tok_SAVE_FROM_FLASHBANGS">0</span>
+              </div>
               <button class="btn" id="watchAdSaveFlash">Watch Ad</button>
             </div>
             <div class="shop-progress" style="margin-left:8px; font-size:12px; color:#94a3b8;">
-              Progress: <b id="prog_SAVE_FROM_FLASHBANGS">0/15</b> · Tokens: <b id="tok_SAVE_FROM_FLASHBANGS">0</b>
+              Progress: <b id="prog_SAVE_FROM_FLASHBANGS">0/15</b> · Player Tokens: <b id="player_tok_SAVE_FROM_FLASHBANGS">0</b>
             </div>
           </div>
           <div style="margin-top:8px;color:#94a3b8">
@@ -474,6 +488,8 @@ const irsImg = new Image();
 irsImg.src = 'assets/irs.png';
 const irsPlaceImg = new Image();
 irsPlaceImg.src = 'assets/irsplace.png';
+const kutijaImg = new Image();
+kutijaImg.src = 'assets/kutija.png';
 let playerImgReady = false;
 playerImg.onload  = () => { playerImgReady = true; };
 playerImg.onerror = () => { console.error('Sprite not found: assets/taxpayer.png'); toast?.('Sprite missing'); };
@@ -880,9 +896,9 @@ function rand(min,max){ return min + Math.random()*(max-min); }
 
 /* Spawn (right → left) */
 const obstacleTypes = [
-  { img: null, color: '#22a155', width: 20, height: 40 },
-  { img: irsImg, width: 32, height: 48 },
-  { img: irsPlaceImg, width: 96, height: 72, yOffset: 20 }
+  { img: irsImg, width: 48, height: 72 },
+  { img: irsPlaceImg, width: 96, height: 72, yOffset: 20 },
+  { img: kutijaImg, width: 72, height: 108, yOffset: 10 }
 ];
 
 function seedObstacles(count){
@@ -1097,42 +1113,50 @@ document.getElementById('btnSubmit').onclick = async (ev) => {
   if (btn.disabled) return;
   btn.disabled = true;
 
-  const score = Math.floor(totalScore);
-  const elapsed = (Date.now() - gameStartTs) / 1000;       // kad si startao igru
-  const minSec  = Math.max(score / 6, 8);
-  if (elapsed + 2 < minSec) {
-    toast(`Play a bit longer before submitting (need ~${Math.ceil(minSec)}s, you played ${Math.floor(elapsed)}s)`);
-    btn.disabled = false;
-    return;
-  }
-
   try {
-        await ensurePlayer();
-        // Calculate jump intervals (ms)
-        const intervals = [];
-        for (let i = 1; i < jumpTimestamps.length; i++) {
-          intervals.push(jumpTimestamps[i] - jumpTimestamps[i - 1]);
-        }
-        const res = await fetch(API + '/submit-score', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ 
-            playerId,
-            playerName: (document.getElementById('playerName')?.value || '').trim().slice(0,16) || localStorage.getItem('lastUsedName') || 'Player',
-            score,
-            claimCode,
-            runId: currentRunId,
-            jumpIntervals: intervals
-          })
-        });
-    if (!res.ok) {
-      let msg = 'Submit failed';
-      try { const err = await res.json(); msg = err?.error || msg; } catch (_){}
-      toast('Submit failed: ' + msg);
-      throw new Error(msg);
+    await ensurePlayer();
+
+    // ✅ Ako nemamo aktivan run, pokreni ga sad
+    if (!currentRunId) {
+      const r = await apiPost('/start-run', { playerId });
+      currentRunId = r.runId;
     }
 
-    document.getElementById('btnRefresh').click();
+    const score = Math.floor(totalScore);
+    const elapsed = (Date.now() - gameStartTs) / 1000;       // kad si startao igru
+    const minSec  = Math.max(score / 6, 8);
+    if (elapsed + 2 < minSec) {
+      toast(`Play a bit longer before submitting (need ~${Math.ceil(minSec)}s, you played ${Math.floor(elapsed)}s)`);
+      btn.disabled = false;
+      return;
+    }
+
+    // izračun intervala
+    const intervals = [];
+    for (let i = 1; i < jumpTimestamps.length; i++) {
+      intervals.push(jumpTimestamps[i] - jumpTimestamps[i - 1]);
+    }
+
+    const res = await fetch(API + '/submit-score', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ 
+        playerId,
+        playerName: (document.getElementById('playerName')?.value || '').trim().slice(0,16) || localStorage.getItem('lastUsedName') || 'Player',
+        score,
+        runId: currentRunId,     // sada sigurno postoji
+        jumpIntervals: intervals
+      })
+    });
+    if (!res.ok) {
+      let msg = 'Submit failed';
+      try { const err = await res.json(); msg = err?.error || msg; } catch {}
+      toast('Submit failed: ' + msg);
+    } else {
+      toast('Score submitted!');
+      document.getElementById('btnRefresh')?.click();
+      currentRunId = null; // ✅ resetiraj za iduću partiju
+    }
   } catch (error) {
     console.error('Error submitting score:', error);
   } finally {
@@ -1256,6 +1280,8 @@ bind('watchAdSaveFlash', ()=> { currentAdItem = 'SAVE_FROM_FLASHBANGS';requestAd
 // USE
 bind('useFlashbang', ()=> tryUse('FLASHBANG'));
 bind('useReset',     ()=> tryUse('RESET_LEADERBOARD'));
+bind('useSaveReset', ()=> tryUse('SAVE_FROM_RESET'));
+bind('useSaveFlash', ()=> tryUse('SAVE_FROM_FLASHBANGS'));
 
 window.addEventListener('keydown', (e)=>{
   if(gameState==='menu' && (e.code==='Enter'||e.code==='Space')){ e.preventDefault(); startGame(); return; }
@@ -1471,7 +1497,7 @@ function update(){
       }
 // Lagano suženi hitbox-evi (u px)
 const DINO_PAD = { left: 4, right: 4, top: 6, bottom: 2 };
-const OBS_PAD  = { left: 12, right: 12, top: 10, bottom: 0 };
+const OBS_PAD  = { left: 18, right: 18, top: 15, bottom: 5 };
 
 // Shrinkani hitbox za dino
 const dx = dino.x + DINO_PAD.left;
@@ -1725,25 +1751,51 @@ async function simulateAdminTopScore(){
   } catch (e) { console.error('Admin score error:', e); toast('Admin: submit failed.'); }
 }
 
-async function tryUse(item){
-  // Admin smije i bez tokena
+async function tryUse(item) {
+  // First check if player has tokens
   if (!isAdmin) {
-    const t = itemTokens[item] || 0;
-    if (t <= 0) { toast('No tokens. Watch ads or buy a token.'); return; }
+    const tokens = itemTokens[item] || 0;
+    if (tokens <= 0) {
+      toast('No tokens available. Watch ads to earn tokens.');
+      return false;
+    }
   }
 
-  // Optimistično potroši lokalno pa zovi server
+  // Deduct token if not admin
   if (!isAdmin) {
     itemTokens[item] = (itemTokens[item] || 0) - 1;
     saveMeta();
     updateShopDisplay();
   }
 
-  await useItem(item); // već postoji u tvom kodu (zove /use-item)
-  toast(`Used: ${item.replaceAll('_',' ')} (tokens left: ${itemTokens[item] || 0})`);
-
-  // Instant lokalni efekt za FLASHBANG (ako server ne pošalje odmah)
-  if (item === 'FLASHBANG' && !_shieldActive) applyFlash(900);
+  // Call server to redeem
+  try {
+    await useItem(item);
+    toast(`Used ${item.replaceAll('_',' ')} (${itemTokens[item] || 0} tokens left)`);
+    
+    // Apply immediate effect if needed
+    if (item === 'FLASHBANG' && !_shieldActive) {
+      applyFlash(900);
+    }
+    
+    // Update player-specific token display
+    const playerTokenEl = document.getElementById(`player_tok_${item}`);
+    if (playerTokenEl) {
+      playerTokenEl.textContent = itemTokens[item] || 0;
+    }
+    
+    return true;
+  } catch (e) {
+    console.error('Redeem failed:', e);
+    // Restore token if redemption failed
+    if (!isAdmin) {
+      itemTokens[item] = (itemTokens[item] || 0) + 1;
+      saveMeta();
+      updateShopDisplay();
+    }
+    toast('Failed to redeem item');
+    return false;
+  }
 }
 
 // Init: učitaj LB odmah na load
